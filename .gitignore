@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.tools/
+.local/
+artifacts/
+TestResults/
+*.user
+*.pfx
+.vs/
+ui-test-results/
