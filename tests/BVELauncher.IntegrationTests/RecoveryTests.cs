@@ -11,6 +11,31 @@ namespace BVELauncher.IntegrationTests;
 public sealed class RecoveryTests
 {
     [Fact]
+    public async Task PreferencesWaitForTransientReaderBeforeAtomicReplace()
+    {
+        using var env = new TestEnvironment(); var path = Path.Combine(env.Content, "preferences.xml");
+        await File.WriteAllTextAsync(path, "<Preferences><HeadMotion>25</HeadMotion></Preferences>");
+        var adapter = new Bve6SettingsAdapter(env.Backups); var snapshot = await adapter.ReadAsync(path);
+        using var reader = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var saving = adapter.SaveAsync(snapshot, new Dictionary<string, string> { ["HeadMotion"] = "40" });
+        await Task.Delay(250); reader.Dispose(); await saving;
+        Assert.Equal("40", (await adapter.ReadAsync(path)).Values["HeadMotion"]);
+    }
+    [Fact]
+    public async Task PreferencesRetryStillRejectsExternalModification()
+    {
+        using var env = new TestEnvironment(); var path = Path.Combine(env.Content, "preferences.xml");
+        await File.WriteAllTextAsync(path, "<Preferences><HeadMotion>25</HeadMotion></Preferences>");
+        var adapter = new Bve6SettingsAdapter(env.Backups); var snapshot = await adapter.ReadAsync(path);
+        using var blocker = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var saving = adapter.SaveAsync(snapshot, new Dictionary<string, string> { ["HeadMotion"] = "40" });
+        await Task.Delay(150);
+        await File.WriteAllTextAsync(path, "<Preferences><HeadMotion>60</HeadMotion></Preferences>");
+        blocker.Dispose();
+        Assert.Equal("SettingsChanged", (await Assert.ThrowsAsync<IOException>(() => saving)).Message);
+        Assert.Equal("60", (await adapter.ReadAsync(path)).Values["HeadMotion"]);
+    }
+    [Fact]
     public async Task AtomicCopyRejectsUnexpectedContentBeforeReplacingExistingFile()
     {
         using var env = new TestEnvironment(); var source = Path.Combine(env.Root, "source.txt"); var destination = Path.Combine(env.Content, "keep.txt");

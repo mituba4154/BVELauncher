@@ -15,7 +15,7 @@ SDKは作業ディレクトリの`.tools/dotnet`へ配置し、既存のグロ�
 
 Debug / Releaseともにrestore、build、testsが成功しています。
 ビルドは警告0 / エラー0です。
-unit tests 31件、integration tests 40件、合計71件、skip 0 / failure 0です。
+unit tests 31件、integration tests 42件、合計73件、skip 0 / failure 0です。
 TRXは`TestResults/<configuration>/`に出力します。
 
 ## 自動テストの対象
@@ -26,7 +26,7 @@ TRXは`TestResults/<configuration>/`に出力します。
 | ViewModel / query | metadata検索、alias、グループ、お気に入り、非表示、ソート、通知 |
 | Localization | ja-JP / en-USのキー一致・非空値、表示名 |
 | SQLite | fresh / corrupt、schema 1→3とbackup、移動ID、複数root、古いscanによるユーザー変更の上書き防止、再起動後の解析再利用・変更失効・参照先の追加削除 |
-| XML settings | 両実機由来fixtureの118項目・57キー、未知XML・CRLF維持、hash競合、入力範囲、backup / restore |
+| XML settings | 両実機由来fixtureの118項目・57キー、未知XML・CRLF維持、hash競合、入力範囲、backup / restore、一時的な読取ハンドルの待機と再試行中の外部変更拒否 |
 | Launch | 元ファイル不変、生成Vehicle・相対Route、ArgumentList / working directory、保存車両と明示標準車両の区別 |
 | Cleanup | 実行中PID＋開始時刻のlease維持、終了済みleaseの清掃、lease保存失敗時の未起動ファイル清掃 |
 | Import | ZIP / 7z / folder / single、ネスト保持、Scenarios root、traversal / device / ADS / 同名拒否、サイズ制限 |
@@ -61,6 +61,7 @@ BVE6数値入力の即保存、カテゴリ変更後の値保持、補助表示�
 永続解析キャッシュを作成した後の再起動では、正常なテキストの再解析は0件でした。
 解析不能な32件は再確認するため先頭読み込みが残り、全rootのファイル列挙も行います。検索入力はファイル走査を起動しません。
 自作BMPの赤→青の変更が、既存カードの画像へ反映されることも確認しました。
+同じ自作BMPを共有する100シナリオを一度に追加し、競合警告がなく、縮小PNGが1件だけ作成され、複数カードに画像が表示されることを確認しました。
 `scripts/ui-import-tests.ps1`は自作ZIPをWindows標準pickerで選択し、preview確定、シナリオ即反映、履歴からのManaged uninstall、元ZIP hash維持を検証します。
 追加シナリオだけを取り消し、既存シナリオのhashを変更せず1件→2件→1件に戻ることを実測しました。
 CIの非対話runnerではUI操作やBVE実行を成功扱いにせず、build / tests / publishを実行します。GitHub Actionsでもこの構成のbuild / tests / ZIP生成が成功しました。

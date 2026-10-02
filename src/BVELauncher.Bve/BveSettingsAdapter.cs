@@ -74,8 +74,14 @@ public abstract class BveSettingsAdapter(IBackupService backups) : IBveSettingsA
             { await stream.WriteAsync(content, cancellationToken).ConfigureAwait(false); stream.Flush(true); }
             _ = Load(await File.ReadAllBytesAsync(temporary, cancellationToken).ConfigureAwait(false));
             cancellationToken.ThrowIfCancellationRequested();
-            if (Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(snapshot.Path, cancellationToken).ConfigureAwait(false))) != snapshot.OriginalHash) throw new IOException("SettingsChanged");
-            File.Replace(temporary, snapshot.Path, null);
+            for (int attempt = 0; ; attempt++)
+            {
+                if (Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(snapshot.Path, cancellationToken).ConfigureAwait(false))) != snapshot.OriginalHash) throw new IOException("SettingsChanged");
+                try { File.Replace(temporary, snapshot.Path, null); break; }
+                // 一時的な読取ハンドルだけ待つ。再試行ごとに外部変更を確認し、上書きを避ける。
+                catch (IOException ex) when (attempt < 4 && (ex.HResult & 0xffff) is 32 or 33 or 1175)
+                { await Task.Delay(100 * (attempt + 1), cancellationToken).ConfigureAwait(false); }
+            }
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }, cancellationToken);

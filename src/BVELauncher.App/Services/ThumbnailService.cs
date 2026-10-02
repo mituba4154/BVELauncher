@@ -10,9 +10,18 @@ namespace BVELauncher.App.Services;
 public sealed class ThumbnailService(AppPaths paths, ILocalLog log)
 {
     private readonly SemaphoreSlim gate = new(2, 2);
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> imageGates = new(StringComparer.OrdinalIgnoreCase);
     public async Task<string?> GetAsync(string? imagePath, CancellationToken cancellationToken)
     {
         if (imagePath == null) return null;
+        // 同じ画像を使う複数シナリオが、同じ一時ファイルを同時に作成しない。
+        var imageGate = imageGates.GetOrAdd(imagePath, _ => new(1, 1));
+        await imageGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await CreateAsync(imagePath, cancellationToken).ConfigureAwait(false); }
+        finally { imageGate.Release(); }
+    }
+    private async Task<string?> CreateAsync(string imagePath, CancellationToken cancellationToken)
+    {
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
