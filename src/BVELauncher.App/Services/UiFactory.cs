@@ -6,6 +6,14 @@ namespace BVELauncher.App.Services;
 
 public static class UiFactory
 {
+    private static readonly SemaphoreSlim dialogGate = new(1, 1);
+    public static async Task<ContentDialogResult> ShowQueuedAsync(this ContentDialog dialog)
+    {
+        // 閉じるアニメーション中の連続操作でも、二重ShowAsyncによる例外を起こさない。
+        await dialogGate.WaitAsync();
+        try { return await dialog.ShowAsync(); }
+        finally { dialogGate.Release(); }
+    }
     public static T Identify<T>(T control, string id, string label) where T : FrameworkElement
     { AutomationProperties.SetAutomationId(control, id); AutomationProperties.SetName(control, label); return control; }
     public static StackPanel Form() => new() { Spacing = 16, Padding = new Thickness(16), MinWidth = 460 };

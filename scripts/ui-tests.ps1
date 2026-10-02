@@ -20,7 +20,11 @@ function Wait-Ui([string]$Id,[string]$Value,[long]$Window=$mainHwnd) {
     if($Value){$arguments+=@('--value',$Value)}
     Run-Ui $arguments | Out-Null
 }
-function Invoke-Ui([string]$Id,[long]$Window=$mainHwnd){Run-Ui @('invoke',$Id,'-w',[string]$Window)|Out-Null}
+function Invoke-Ui([string]$Id,[long]$Window=$mainHwnd){
+    if($Id -eq 'CloseButton'){Wait-Ui $Id '' $Window}
+    Run-Ui @('invoke',$Id,'-w',[string]$Window)|Out-Null
+    if($Id -eq 'CloseButton' -and $Window -eq $mainHwnd){Run-Ui @('wait-for',$Id,'--gone','-w',[string]$Window,'-t','3000')|Out-Null}
+}
 function Get-Elements($Nodes) {foreach($node in $Nodes){$node;if($node.children){Get-Elements $node.children}}}
 function Open-Actions {
     $tree=Run-Ui @('inspect','-w',[string]$mainHwnd,'--json','--depth','12')|ConvertFrom-Json

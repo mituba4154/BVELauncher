@@ -56,7 +56,7 @@ public sealed class BveSettingsEditor(LauncherSession session, LocalizationServi
                 Build();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
-            { await UiFactory.Dialog(XamlRoot, l["Error"], l["Close"], UiFactory.Text(l[ex.Message])).ShowAsync(); }
+            { await UiFactory.Dialog(XamlRoot, l["Error"], l["Close"], UiFactory.Text(l[ex.Message])).ShowQueuedAsync(); }
         }));
         foreach (var definition in snapshot.Definitions.Where(d => d.Category == category))
         {

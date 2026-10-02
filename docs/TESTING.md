@@ -55,6 +55,7 @@ BVE6数値入力の即保存、カテゴリ変更後の値保持、補助表示�
 画像とJSON結果は`ui-test-results/`に出力します。
 保存時のNumberBox未確定入力と、ContentDialog内の選択Popupで操作が停滞する問題を検出して修正しました。
 操作メニューは右クリック / Shift+F10 / 明示ボタンから同じMenuFlyoutを開きます。
+ダイアログを短い間隔で切り替える操作で二重表示の例外を検出し、ContentDialogの表示を直列化しました。
 83シナリオ・81車両・30,559資産の実ライブラリで、シナリオ設定のContentDialog表示が停止し、UIスレッドのCPU消費とメモリ増加が続くことを再現しました。
 専用ウィンドウと有限viewportへ変更し、`scripts/ui-large-library-tests.ps1`で10回の開閉、車両検索、BVE候補展開、alias保存・復元、Grid / List・グループ開閉を確認しました。
 このバッチでは終了時のworking setが約579 MiBで、操作への応答が維持されました。

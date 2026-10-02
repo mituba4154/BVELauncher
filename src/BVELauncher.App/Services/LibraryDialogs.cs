@@ -8,7 +8,7 @@ namespace BVELauncher.App.Services;
 
 public sealed class LibraryDialogs(LauncherSession session, LocalizationService l, MainPageViewModel vm, XamlRoot root)
 {
-    public async Task ErrorAsync(string message) => await UiFactory.Dialog(root, l["Error"], l["Close"], UiFactory.Text(message)).ShowAsync();
+    public async Task ErrorAsync(string message) => await UiFactory.Dialog(root, l["Error"], l["Close"], UiFactory.Text(message)).ShowQueuedAsync();
     public async Task DetailsAsync(ScenarioCardViewModel card)
     {
         if (scenarioSettingsWindow != null) { scenarioSettingsWindow.Activate(); return; }
@@ -23,11 +23,11 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
     {
         var field = UiFactory.Identify(new TextBox { Text = card.Entry.CustomGroup ?? "", Header = l["Group"] }, "GroupName", l["Group"]);
         var dialog = UiFactory.Dialog(root, l["MoveGroup"], l["Cancel"], field); dialog.PrimaryButtonText = l["Save"];
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary) await session.UpdateScenarioAsync(card.Entry with { CustomGroup = string.IsNullOrWhiteSpace(field.Text) ? null : field.Text });
+        if (await dialog.ShowQueuedAsync() == ContentDialogResult.Primary) await session.UpdateScenarioAsync(card.Entry with { CustomGroup = string.IsNullOrWhiteSpace(field.Text) ? null : field.Text });
     }
     public async Task VehicleAsync(ScenarioCardViewModel? card)
     {
-        var panel = new Grid { RowSpacing = 12, MinWidth = 560, MaxHeight = 580 };
+        var panel = new Grid { RowSpacing = 12, MinWidth = 460, MaxHeight = 580 };
         panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new() { Height = new(280) }); panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
         var search = UiFactory.Identify(new TextBox { Header = l["Search"] }, "VehicleSearch", l["Search"]);
         var list = UiFactory.Identify(new ListView { SelectionMode = ListViewSelectionMode.Single, DisplayMemberPath = "DisplayName" }, "VehicleList", l["Vehicles"]);
@@ -49,7 +49,7 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
         panel.Children.Add(search); Grid.SetRow(list, 1); panel.Children.Add(list); Grid.SetRow(details, 2); panel.Children.Add(details);
         var dialog = UiFactory.Dialog(root, l["Vehicles"], l["Close"], panel);
         if (card != null) dialog.PrimaryButtonText = l["DriveThisVehicle"];
-        var result = await dialog.ShowAsync();
+        var result = await dialog.ShowQueuedAsync();
         if (card != null && result == ContentDialogResult.Primary && list.SelectedItem is VehicleEntry chosen)
             await vm.DriveWithVehicleAsync(card, chosen.Id == Guid.Empty ? null : new(chosen.Path, chosen.DisplayName));
     }
@@ -63,7 +63,7 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
             panel.Children.Add(new Expander { Header = text, Content = detail, HorizontalAlignment = HorizontalAlignment.Stretch });
         }
         if (card.Entry.Compatibility.Items.Count == 0) panel.Children.Add(UiFactory.Text(l["NoDiagnostics"]));
-        await UiFactory.Dialog(root, l["Diagnostics"], l["Close"], new ScrollViewer { Content = panel, MaxHeight = 560 }).ShowAsync();
+        await UiFactory.Dialog(root, l["Diagnostics"], l["Close"], new ScrollViewer { Content = panel, MaxHeight = 560 }).ShowQueuedAsync();
     }
     public async Task ImportAsync(string sourcePath, string? destinationOverride = null)
     {
@@ -83,7 +83,7 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
             form.Children.Add(new Expander { Header = l["Files"], Content = files, HorizontalAlignment = HorizontalAlignment.Stretch });
             if (plan.Diagnostics.Count > 0) form.Children.Add(new Expander { Header = l["Warnings"] + " (" + plan.Diagnostics.Count + ")", Content = new ListView { ItemsSource = plan.Diagnostics.Select(d => d.Reference.Length > 0 ? d.Reference : d.Code).ToArray(), MaxHeight = 160 } });
             var dialog = UiFactory.Dialog(root, l["ImportPreview"], l["Cancel"], new ScrollViewer { Content = form, MaxHeight = 560 }); dialog.PrimaryButtonText = l["Import"];
-            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (await dialog.ShowQueuedAsync() != ContentDialogResult.Primary) return;
             if (!target.Text.Equals(destination, StringComparison.OrdinalIgnoreCase))
             {
                 // 配置先変更で競合の数が変わるため、新しいプレビューへ戻す。
@@ -94,7 +94,7 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
             if (plan.Operations.Any(o => o.Exists) && selected is ConflictBehavior.Ask or ConflictBehavior.Overwrite)
             {
                 var confirm = UiFactory.Dialog(root, l["Confirm"], l["Cancel"], UiFactory.Text(l["ConflictConfirm"])); confirm.PrimaryButtonText = l["Overwrite"]; confirm.SecondaryButtonText = l["Skip"];
-                var choice = await confirm.ShowAsync(); if (choice == ContentDialogResult.None) return; selected = choice == ContentDialogResult.Primary ? ConflictBehavior.Overwrite : ConflictBehavior.Skip;
+                var choice = await confirm.ShowQueuedAsync(); if (choice == ContentDialogResult.None) return; selected = choice == ContentDialogResult.Primary ? ConflictBehavior.Overwrite : ConflictBehavior.Skip;
             }
             var currentPlan = plan;
             await vm.RunOperationAsync(async token =>

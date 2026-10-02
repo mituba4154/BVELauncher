@@ -144,18 +144,18 @@ public sealed partial class SettingsWindow : Window
         var records = (await session.Store.GetInstallationsAsync()).Where(r => !r.RolledBack).OrderByDescending(r => r.InstalledUtc).ToArray();
         var list = UiFactory.Identify(new ListView { ItemsSource = records, DisplayMemberPath = "Source", MaxHeight = 360, MinWidth = 560 }, "Installations", l["ImportHistory"]);
         var dialog = UiFactory.Dialog(SettingsContent.XamlRoot, l["ImportHistory"], l["Close"], list); dialog.PrimaryButtonText = l["Uninstall"];
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary && list.SelectedItem is InstallationRecord selected && await ConfirmAsync("UninstallConfirm"))
+        if (await dialog.ShowQueuedAsync() == ContentDialogResult.Primary && list.SelectedItem is InstallationRecord selected && await ConfirmAsync("UninstallConfirm"))
         { var result = await session.Imports.UninstallAsync(selected, session.Library); await vm.RescanCommand.ExecuteAsync(null); SettingsStatus.Text = l.Format("UninstallResult", result.Removed, result.Preserved.Count); }
     }
     private async Task ShowBackupsAsync()
     {
         var service = App.Services.GetRequiredService<IBackupService>(); var list = UiFactory.Identify(new ListView { ItemsSource = await service.ListAsync(), DisplayMemberPath = "OriginalPath", MaxHeight = 360, MinWidth = 560 }, "BackupList", l["Backups"]);
         var dialog = UiFactory.Dialog(SettingsContent.XamlRoot, l["Backups"], l["Close"], list); dialog.PrimaryButtonText = l["Restore"];
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary && list.SelectedItem is BackupRecord record && await ConfirmAsync("RestoreBackupConfirm"))
+        if (await dialog.ShowQueuedAsync() == ContentDialogResult.Primary && list.SelectedItem is BackupRecord record && await ConfirmAsync("RestoreBackupConfirm"))
         { if (File.Exists(record.OriginalPath)) await service.CreateAsync(record.OriginalPath, "BeforeRestore"); await service.RestoreAsync(record); SettingsStatus.Text = l["Saved"]; }
     }
     private async Task<bool> ConfirmAsync(string key)
-    { var dialog = UiFactory.Dialog(SettingsContent.XamlRoot, l["Confirm"], l["Cancel"], UiFactory.Text(l[key])); dialog.PrimaryButtonText = l["OK"]; return await dialog.ShowAsync() == ContentDialogResult.Primary; }
+    { var dialog = UiFactory.Dialog(SettingsContent.XamlRoot, l["Confirm"], l["Cancel"], UiFactory.Text(l[key])); dialog.PrimaryButtonText = l["OK"]; return await dialog.ShowQueuedAsync() == ContentDialogResult.Primary; }
     private async Task GuardAsync(Func<Task> action)
     {
         try { await action(); }

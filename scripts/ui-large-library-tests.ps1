@@ -49,8 +49,11 @@ try {
 Ui @('wait-for','StatusText','-w',"$main",'--value',"$ExpectedScenarios シナリオ",'-t','3000')|Out-Null
 Ui @('invoke','ListButton','-w',"$main")|Out-Null
 Ui @('invoke','GridButton','-w',"$main")|Out-Null
-Ui @('invoke','GroupToggle','-w',"$main")|Out-Null
-Ui @('invoke','GroupToggle','-w',"$main")|Out-Null
+$tree=Ui @('inspect','-w',"$main",'--json','--depth','12')|ConvertFrom-Json
+$group=Elements $tree.windows[0].elements|Where-Object automationId -eq GroupToggle|Select-Object -First 1
+if(-not $group){throw 'Group header missing'}
+Ui @('invoke',$group.name,'-w',"$main")|Out-Null
+Ui @('invoke',$group.name,'-w',"$main")|Out-Null
 $process=Get-Process -Id $AppPid
 if(-not $process.Responding -or $process.WorkingSet64 -gt 1500MB){throw 'Unexpected UI hang or memory growth'}
 $result=[pscustomobject]@{Passed=$true;Scenarios=$ExpectedScenarios;RepeatedOpenClose=10;SaveAndRestore=$true;WorkingSetBytes=$process.WorkingSet64;InitialWorkingSetBytes=$initial}

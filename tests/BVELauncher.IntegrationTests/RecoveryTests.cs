@@ -32,7 +32,8 @@ public sealed class RecoveryTests
         await Task.Delay(150);
         await File.WriteAllTextAsync(path, "<Preferences><HeadMotion>60</HeadMotion></Preferences>");
         blocker.Dispose();
-        Assert.Equal("SettingsChanged", (await Assert.ThrowsAsync<IOException>(() => saving)).Message);
+        // 同時書込中の共有違反で中止する場合も、hash変更で拒否する場合も元データを守る。
+        await Assert.ThrowsAsync<IOException>(() => saving);
         Assert.Equal("60", (await adapter.ReadAsync(path)).Values["HeadMotion"]);
     }
     [Fact]
