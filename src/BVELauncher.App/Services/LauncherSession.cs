@@ -8,7 +8,7 @@ namespace BVELauncher.App.Services;
 
 public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettingsStore settingsStore,
     IRuntimeDetector detector, LibraryScanner scanner, CompatibilityEngine diagnostics, IImportService imports,
-    ProcessRunner runner, LibraryWatcher watcher, ExtensionDetector extensions, ILocalLog log)
+    ProcessRunner runner, LibraryWatcher watcher, ExtensionDetector extensions, ILocalLog log, BackupService backups)
 {
     public AppPaths Paths => paths;
     public ILibraryStore Store => store;
@@ -18,6 +18,7 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
     public AppSettings Settings { get; private set; } = new();
     public LibrarySnapshot Library { get; private set; } = LibrarySnapshot.Empty;
     public event Action? LibraryChanged;
+    private Action? watchCallback;
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
         await store.InitializeAsync(cancellationToken);
@@ -32,6 +33,9 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
             roots.AddRange(RuntimeDetector.DiscoverScenarioRoots(runtimes).Distinct(StringComparer.OrdinalIgnoreCase).Select(p => new ScenarioRoot(Guid.NewGuid(), p)));
         Settings = Settings with { Runtimes = runtimes.ToList(), Roots = roots };
         await settingsStore.SaveAsync(Settings, cancellationToken);
+        var protectedBackups = (await store.GetInstallationsAsync(cancellationToken)).SelectMany(i => i.Files).Where(f => f.BackupPath != null).Select(f => f.BackupPath!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        await backups.ApplyRetentionAsync(Settings.BackupRetentionDays, protectedBackups, cancellationToken);
+        if (log is LocalLog localLog) await Task.Run(() => localLog.ApplyRetention(Settings.LogRetentionDays), cancellationToken);
     }
     public async Task ScanAsync(IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
     {
@@ -42,10 +46,22 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
         await store.SaveAsync(Library, cancellationToken);
         LibraryChanged?.Invoke();
     }
-    public void Watch(Action changed) => watcher.Watch(Settings.Roots.Select(r => r.Path), changed);
+    public void Watch(Action changed) { watchCallback = changed; watcher.Watch(Settings.Roots.Select(r => r.Path), changed); }
     public void StopWatching() => watcher.Dispose();
+    public void AcceptDiscovered(IReadOnlyList<ScenarioEntry> entries)
+    {
+        var ids = Library.Scenarios.Select(s => s.Id).ToHashSet();
+        var added = entries.Where(s => !ids.Contains(s.Id)).ToArray();
+        if (added.Length == 0) return;
+        Library = Library with { Scenarios = Library.Scenarios.Concat(added).ToArray() };
+        LibraryChanged?.Invoke();
+    }
     public async Task SaveSettingsAsync(AppSettings settings, CancellationToken cancellationToken = default)
-    { await settingsStore.SaveAsync(settings, cancellationToken); Settings = settings; }
+    {
+        bool changedRoots = !Settings.Roots.Select(r => r.Path).SequenceEqual(settings.Roots.Select(r => r.Path), StringComparer.OrdinalIgnoreCase);
+        await settingsStore.SaveAsync(settings, cancellationToken); Settings = settings;
+        if (changedRoots && watchCallback != null) watcher.Watch(Settings.Roots.Select(r => r.Path), watchCallback);
+    }
     public async Task UpdateScenarioAsync(ScenarioEntry entry, CancellationToken cancellationToken = default)
     {
         await store.UpdateScenarioAsync(entry, cancellationToken);

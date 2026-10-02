@@ -29,6 +29,11 @@ public abstract class BveSettingsAdapter(IBackupService backups) : IBveSettingsA
         {
             var definition = snapshot.Definitions.Single(d => d.Property == property);
             Validate(definition, value);
+            if (property == "FontSize")
+            {
+                foreach (XmlNode scale in document.SelectNodes("/Preferences/Assistants/AssistantSettings/Scale | /Preferences/Timetable/Scale")!) replacements[scale] = value;
+                continue;
+            }
             if (definition.Property == "InputPlugins")
             {
                 var node = document.SelectSingleNode(definition.XmlPath) ?? throw new InvalidDataException("SettingsNodeMissing");
@@ -113,6 +118,7 @@ public abstract class BveSettingsAdapter(IBackupService backups) : IBveSettingsA
         Add("Anisotropy", "Graphics", "Anisotropy", SettingType.Choice, "0", choices: ["0", "1", "2", "4", "8", "16"]);
         Add("FontName", "Assistants", "FontName", SettingType.Text, "");
         Add("FontStyle", "Assistants", "FontStyle", SettingType.Choice, "Bold", choices: ["Regular", "Bold"]);
+        Add("FontSize", "Assistants", "Assistants/AssistantSettings[1]/Scale", SettingType.Integer, "18", 8, 96);
         Add("HeadMotion", "Simulation", "HeadMotion", SettingType.Integer, "25", 0, 100);
         Add("Language", "General", "Language", SettingType.Choice, "Japanese", choices: ["Japanese", "English"]);
         Add("ScenarioDirectory", "General", "ScenarioForm/Address/string[1]", SettingType.Path, "");

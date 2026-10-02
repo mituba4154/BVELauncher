@@ -17,9 +17,11 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
         var alias = UiFactory.Identify(new TextBox { Text = card.Entry.Alias ?? "" }, "ScenarioAlias", l["Alias"]);
         var group = UiFactory.Identify(new TextBox { Text = card.Entry.CustomGroup ?? "" }, "ScenarioGroup", l["Group"]);
         var runtimes = session.Settings.Runtimes;
-        var runtime = UiFactory.Combo(new[] { l["Auto"] }.Concat(runtimes.Select(r => r.Kind + " " + r.Version)), card.Entry.RuntimeId == null ? 0 : runtimes.FindIndex(r => r.Id == card.Entry.RuntimeId) + 1, "ScenarioRuntime", l["Runtime"]);
+        var runtime = UiFactory.Identify(new ListView { ItemsSource = new[] { l["Auto"] }.Concat(runtimes.Select(r => (r.Kind == RuntimeKind.Bve6 ? l["Bve6"] : l["Bve5"]) + " " + r.Version + " · " + Path.GetFileName(r.InstallDirectory))).ToArray(), MaxHeight = 144, SelectionMode = ListViewSelectionMode.Single }, "ScenarioRuntime", l["Runtime"]);
+        runtime.SelectedIndex = card.Entry.RuntimeId == null ? 0 : runtimes.FindIndex(r => r.Id == card.Entry.RuntimeId) + 1;
         var vehicles = session.Library.Vehicles;
-        var vehicle = UiFactory.Combo(new[] { l["StandardVehicle"] }.Concat(vehicles.Select(v => v.DisplayName)), card.Entry.DefaultVehiclePath == null ? 0 : vehicles.ToList().FindIndex(v => v.Path.Equals(card.Entry.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase)) + 1, "ScenarioVehicle", l["DefaultVehicle"]);
+        var vehicle = UiFactory.Identify(new ListView { ItemsSource = new[] { l["StandardVehicle"] }.Concat(vehicles.Select(v => v.DisplayName)).ToArray(), MaxHeight = 144, SelectionMode = ListViewSelectionMode.Single }, "ScenarioVehicle", l["DefaultVehicle"]);
+        vehicle.SelectedIndex = card.Entry.DefaultVehiclePath == null ? 0 : vehicles.ToList().FindIndex(v => v.Path.Equals(card.Entry.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase)) + 1;
         form.Children.Add(UiFactory.Row(l["Alias"], alias)); form.Children.Add(UiFactory.Row(l["Group"], group)); form.Children.Add(UiFactory.Row(l["Runtime"], runtime)); form.Children.Add(UiFactory.Row(l["DefaultVehicle"], vehicle));
         var dialog = UiFactory.Dialog(root, l["ScenarioSettings"], l["Cancel"], new ScrollViewer { Content = form, MaxHeight = 580 }); dialog.PrimaryButtonText = l["Save"];
         if (await dialog.ShowAsync() == ContentDialogResult.Primary)
@@ -71,10 +73,10 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
         if (card.Entry.Compatibility.Items.Count == 0) panel.Children.Add(UiFactory.Text(l["NoDiagnostics"]));
         await UiFactory.Dialog(root, l["Diagnostics"], l["Close"], new ScrollViewer { Content = panel, MaxHeight = 560 }).ShowAsync();
     }
-    public async Task ImportAsync(string sourcePath)
+    public async Task ImportAsync(string sourcePath, string? destinationOverride = null)
     {
         if (session.Settings.Roots.Count == 0) { await ErrorAsync(l["NoRoot"]); return; }
-        var destination = session.Settings.Roots.FirstOrDefault(r => r.Id == session.Settings.DefaultRootId)?.Path ?? session.Settings.Roots[0].Path;
+        var destination = destinationOverride ?? session.Settings.Roots.FirstOrDefault(r => r.Id == session.Settings.DefaultRootId)?.Path ?? session.Settings.Roots[0].Path;
         ImportPlan? plan = null;
         await vm.RunOperationAsync(async token => plan = await session.Imports.AnalyzeAsync(new(sourcePath), destination, new Progress<ScanProgress>(p => vm.Status = l.Format("Scanning", p.Files, p.Scenarios)), token));
         if (plan == null) return;
@@ -83,7 +85,7 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
             var form = UiFactory.Form(); form.Children.Add(UiFactory.Text(l.Format("ImportSummary", plan.Scenarios, plan.Vehicles, plan.Operations.Count)));
             form.Children.Add(UiFactory.Text(l[plan.Confidence]));
             var target = UiFactory.Identify(new TextBox { Text = destination, Header = l["Destination"] }, "ImportDestination", l["Destination"]); form.Children.Add(target);
-            var behavior = UiFactory.Combo(new[] { l["Ask"], l["Skip"], l["Overwrite"] }, (int)session.Settings.ImportConflicts, "ImportConflict", l["Conflict"]); form.Children.Add(UiFactory.Row(l["Conflict"], behavior));
+            var behavior = UiFactory.Identify(new RadioButtons { ItemsSource = new[] { l["Ask"], l["Skip"], l["Overwrite"] }, SelectedIndex = (int)session.Settings.ImportConflicts }, "ImportConflict", l["Conflict"]); form.Children.Add(UiFactory.Row(l["Conflict"], behavior));
             form.Children.Add(UiFactory.Text(l["Added"] + ": " + plan.Operations.Count(o => !o.Exists) + " / " + l["Overwritten"] + ": " + plan.Operations.Count(o => o.Exists)));
             var files = UiFactory.Identify(new ListView { ItemsSource = plan.Operations.Select(o => (o.Exists ? "⚠ " : "+ ") + o.RelativePath).ToArray(), MaxHeight = 200 }, "ImportFiles", l["Files"]);
             form.Children.Add(new Expander { Header = l["Files"], Content = files, HorizontalAlignment = HorizontalAlignment.Stretch });
@@ -92,10 +94,9 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
             if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
             if (!target.Text.Equals(destination, StringComparison.OrdinalIgnoreCase))
             {
-                await session.Imports.DiscardAsync(plan); plan = await session.Imports.AnalyzeAsync(new(sourcePath), target.Text);
                 // 配置先変更で競合の数が変わるため、新しいプレビューへ戻す。
                 await session.Imports.DiscardAsync(plan); plan = null;
-                await ImportAtAsync(sourcePath, target.Text); return;
+                await ImportAsync(sourcePath, target.Text); return;
             }
             var selected = (ConflictBehavior)behavior.SelectedIndex;
             if (plan.Operations.Any(o => o.Exists) && selected is ConflictBehavior.Ask or ConflictBehavior.Overwrite)
@@ -112,18 +113,5 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
         }
         catch (Exception ex) { await vm.ShowErrorAsync(ex); }
         finally { if (plan != null && Directory.Exists(plan.StagingDirectory)) await session.Imports.DiscardAsync(plan); }
-    }
-    private async Task ImportAtAsync(string sourcePath, string destination)
-    {
-        var plan = await session.Imports.AnalyzeAsync(new(sourcePath), destination);
-        try
-        {
-            var dialog = UiFactory.Dialog(root, l["ImportPreview"], l["Cancel"], UiFactory.Text(l.Format("ImportSummary", plan.Scenarios, plan.Vehicles, plan.Operations.Count) + Environment.NewLine + destination));
-            dialog.PrimaryButtonText = l["Import"]; dialog.SecondaryButtonText = l["Skip"];
-            if (plan.Operations.Any(o => o.Exists)) dialog.Content = UiFactory.Text(l["ConflictConfirm"] + Environment.NewLine + destination);
-            var result = await dialog.ShowAsync(); if (result == ContentDialogResult.None) return;
-            await vm.RunOperationAsync(async token => { await session.Imports.CommitAsync(plan, result == ContentDialogResult.Primary ? ConflictBehavior.Overwrite : ConflictBehavior.Skip, cancellationToken: token); await session.ScanAsync(null, token); });
-        }
-        finally { if (Directory.Exists(plan.StagingDirectory)) await session.Imports.DiscardAsync(plan); }
     }
 }

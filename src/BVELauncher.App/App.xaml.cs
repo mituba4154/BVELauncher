@@ -22,7 +22,7 @@ public partial class App : Microsoft.UI.Xaml.Application
         services.AddSingleton<ILocalLog,LocalLog>();services.AddSingleton<ILibraryStore,SqliteLibraryStore>();
         services.AddSingleton<ISettingsStore,SettingsStore>();services.AddSingleton<IAssetReader,BveAssetReader>();
         services.AddSingleton<IRuntimeDetector,RuntimeDetector>();services.AddSingleton<LibraryScanner>();services.AddSingleton<CompatibilityEngine>();
-        services.AddSingleton<IBackupService,BackupService>();services.AddSingleton(new ImportLimits());services.AddSingleton<ArchiveStager>();services.AddSingleton<IImportService,ImportService>();
+        services.AddSingleton<BackupService>();services.AddSingleton<IBackupService>(sp=>sp.GetRequiredService<BackupService>());services.AddSingleton(new ImportLimits());services.AddSingleton<ArchiveStager>();services.AddSingleton<IImportService,ImportService>();
         services.AddSingleton<ProcessRunner>();services.AddSingleton<IProcessRunner>(sp=>sp.GetRequiredService<ProcessRunner>());
         services.AddSingleton<IBveRuntimeAdapter,Bve5RuntimeAdapter>();services.AddSingleton<IBveRuntimeAdapter,Bve6RuntimeAdapter>();
         services.AddSingleton<IBveSettingsAdapter,Bve5SettingsAdapter>();services.AddSingleton<IBveSettingsAdapter,Bve6SettingsAdapter>();

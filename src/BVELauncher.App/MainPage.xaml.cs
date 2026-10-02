@@ -81,11 +81,21 @@ public sealed partial class MainPage:Page
     private MenuFlyout ContextMenu(ScenarioCardViewModel card)
     {
         var menu=new MenuFlyout();
-        Add("Launch",()=>ViewModel.DriveWithVehicleAsync(card,null));Add("OverrideLaunch",()=>dialogs.VehicleAsync(card));menu.Items.Add(new MenuFlyoutSeparator());
+        Add("Launch",()=>ViewModel.DriveWithVehicleAsync(card,null,true));Add("OverrideLaunch",()=>dialogs.VehicleAsync(card));menu.Items.Add(new MenuFlyoutSeparator());
         Add("Favorite",()=>ViewModel.FavoriteCommand.ExecuteAsync(card));Add("MoveGroup",()=>dialogs.GroupAsync(card));
         Add("ScenarioSettings",()=>dialogs.DetailsAsync(card));Add("Diagnostics",()=>dialogs.DiagnosticsAsync(card));menu.Items.Add(new MenuFlyoutSeparator());
         Add("OpenFolder",()=>{ExplorerInterop.OpenFolder(System.IO.Path.GetDirectoryName(card.Entry.Path)!);return Task.CompletedTask;});Add("OpenFile",()=>{ExplorerInterop.OpenTextFile(card.Entry.Path);return Task.CompletedTask;});Add("Hide",()=>ViewModel.HideCommand.ExecuteAsync(card));return menu;
         void Add(string key,Func<Task> action){var item=UiFactory.Identify(new MenuFlyoutItem{Text=l[key]},"Menu"+key,l[key]);item.Click+=async(_,_)=>await GuardAsync(action);menu.Items.Add(item);}
+    }
+    private void ScenarioActions_Loaded(object sender,RoutedEventArgs e)
+    {
+        if(sender is Button button && button.DataContext is ScenarioCardViewModel card)
+        {UiFactory.Identify(button,"ScenarioActions"+card.Entry.Id.ToString("N"),l["ScenarioActions"]);ToolTipService.SetToolTip(button,l["ScenarioActions"]);}
+    }
+    private void ScenarioActions_Click(object sender,RoutedEventArgs e)
+    {
+        if(sender is FrameworkElement element && element.DataContext is ScenarioCardViewModel card)
+        {ViewModel.Selected=card;ContextMenu(card).ShowAt(element);}
     }
     private void Scenarios_KeyDown(object sender,KeyRoutedEventArgs e)
     {

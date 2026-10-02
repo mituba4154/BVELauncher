@@ -4,6 +4,20 @@ namespace BVELauncher.Infrastructure;
 
 public static class AtomicFile
 {
+    public static async Task CopyAsync(string source, string destination, CancellationToken cancellationToken = default)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
+        string temporary = destination + ".BVELauncher-" + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true))
+            await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous | FileOptions.WriteThrough))
+            { await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false); await output.FlushAsync(cancellationToken).ConfigureAwait(false); output.Flush(true); }
+            cancellationToken.ThrowIfCancellationRequested();
+            if (File.Exists(destination)) File.Replace(temporary, destination, null); else File.Move(temporary, destination);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
     public static async Task WriteAsync(string path, byte[] bytes, CancellationToken cancellationToken = default)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);

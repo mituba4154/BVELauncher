@@ -1,0 +1,10 @@
+BveTs Instrument Panel 2.01
+[This]
+Resolution = 1024
+Left = 0
+Right = 1024
+Top = 0
+Bottom = 768
+Center = 512,384
+Origin = 512,384
+

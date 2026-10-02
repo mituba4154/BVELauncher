@@ -18,17 +18,22 @@ public sealed class ProcessRunner(AppPaths paths, ILocalLog log) : IProcessRunne
             marker = Path.Combine(paths.Generated, Guid.NewGuid().ToString("N") + ".json");
             await AtomicFile.WriteAsync(marker, JsonSerializer.SerializeToUtf8Bytes(new GeneratedLease(plan.GeneratedPath, 0, null)), cancellationToken).ConfigureAwait(false);
         }
+        Process? started = null;
         try
         {
             var process = Process.Start(CreateStartInfo(plan)) ?? throw new IOException("Process creation failed.");
+            started = process;
             processes[process.Id] = process;
             if (marker != null)
-                await AtomicFile.WriteAsync(marker, JsonSerializer.SerializeToUtf8Bytes(new GeneratedLease(plan.GeneratedPath!, process.Id, process.StartTime.ToUniversalTime())), CancellationToken.None).ConfigureAwait(false);
+            {
+                try { await AtomicFile.WriteAsync(marker, JsonSerializer.SerializeToUtf8Bytes(new GeneratedLease(plan.GeneratedPath!, process.Id, process.StartTime.ToUniversalTime())), CancellationToken.None).ConfigureAwait(false); }
+                catch (IOException ex) { log.Write("Warning", "Generated lease update deferred until runtime exits.", ex); }
+            }
             return new(process.Id, plan, DateTime.UtcNow);
         }
         catch
         {
-            if (plan.GeneratedPath != null) CleanupGenerated(plan.GeneratedPath, marker);
+            if (started == null && plan.GeneratedPath != null) CleanupGenerated(plan.GeneratedPath, marker);
             throw;
         }
     }
@@ -73,6 +78,8 @@ public sealed class ProcessRunner(AppPaths paths, ILocalLog log) : IProcessRunne
             {
                 var lease = JsonSerializer.Deserialize<GeneratedLease>(await File.ReadAllTextAsync(marker, cancellationToken).ConfigureAwait(false));
                 if (lease == null) continue;
+                // 起動直後のクラッシュでPIDを記録できなかった場合は、BVE終了まで保守的に保持する。
+                if (lease.ProcessId == 0 && Process.GetProcessesByName("BveTs").Any(p => { using (p) return !p.HasExited; })) continue;
                 // PIDだけで別プロセスの所有権を誤認しない。
                 if (lease.ProcessId != 0)
                 {

@@ -1,0 +1,7 @@
+BveTs Scenario 2.00
+Title = 自動テスト路線
+RouteTitle = テスト線
+VehicleTitle = テスト車両
+Route = map.txt
+Vehicle = vehicle.txt
+Author = BVELauncher tests

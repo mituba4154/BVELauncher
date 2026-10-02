@@ -4,6 +4,8 @@ using BVELauncher.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
 using Windows.System;
+using BVELauncher.Bve;
+using Microsoft.Windows.Storage.Pickers;
 
 namespace BVELauncher.App.Services;
 
@@ -28,6 +30,30 @@ public sealed class BveSettingsEditor(LauncherSession session, LocalizationServi
         var categories = snapshot.Definitions.Select(d => d.Category).Distinct().ToArray();
         var picker = UiFactory.Combo(categories.Select(c => l[c]).ToArray(), Math.Max(0, Array.IndexOf(categories, category)), "BveCategory", l["BveSettings"]);
         picker.SelectionChanged += (_, _) => { if (picker.SelectedIndex >= 0) { category = categories[picker.SelectedIndex]; Build(); } }; Children.Add(picker);
+        if (category == "Assistants") Children.Add(UiFactory.Button(l["ResetAssistantPositions"], "BveResetAssistantPositions", () =>
+        {
+            foreach (var pair in values) pending[pair.Key] = pair.Value(); values.Clear();
+            foreach (var definition in snapshot.Definitions.Where(d => d.Property.StartsWith("AssistAuto_", StringComparison.Ordinal)))
+            {
+                var visible = "Assist_" + definition.Property["AssistAuto_".Length..];
+                if ((pending.GetValueOrDefault(visible) ?? snapshot.Values[visible]) == "true") pending[definition.Property] = "true";
+            }
+            Build(); return Task.CompletedTask;
+        }));
+        if (category == "Keyboard") Children.Add(UiFactory.Button(l["KeyboardPreset"], "BveKeyboardPreset", async () =>
+        {
+            try
+            {
+                var filePicker = new FileOpenPicker(App.Window!.AppWindow.Id); filePicker.FileTypeFilter.Add(".txt");
+                var file = await filePicker.PickSingleFileAsync(); if (file == null) return;
+                var preset = KeyboardPresetReader.Read(await File.ReadAllTextAsync(file.Path));
+                foreach (var pair in values) pending[pair.Key] = pair.Value(); values.Clear();
+                foreach (var pair in preset) pending[pair.Key] = pair.Value;
+                Build();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+            { await UiFactory.Dialog(XamlRoot, l["Error"], l["Close"], UiFactory.Text(l[ex.Message])).ShowAsync(); }
+        }));
         foreach (var definition in snapshot.Definitions.Where(d => d.Category == category))
         {
             var label = l[definition.ResourceKey]; var current = pending.GetValueOrDefault(definition.Property) ?? snapshot.Values[definition.Property];
@@ -45,7 +71,7 @@ public sealed class BveSettingsEditor(LauncherSession session, LocalizationServi
             {
                 var number = UiFactory.Identify(new NumberBox { Value = double.Parse(current, CultureInfo.InvariantCulture), Minimum = definition.Minimum ?? int.MinValue, Maximum = definition.Maximum ?? int.MaxValue, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact }, "Bve" + definition.Property, label);
                 NumberBoxAutomation.Attach(number, "Bve" + definition.Property, label);
-                values[definition.Property] = () => ((int)number.Value).ToString(CultureInfo.InvariantCulture); control = number;
+                values[definition.Property] = () => NumberBoxAutomation.ReadInteger(number); control = number;
                 if (definition.Type == SettingType.Key)
                 {
                     var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 }; number.Width = 140; panel.Children.Add(number);
@@ -63,10 +89,11 @@ public sealed class BveSettingsEditor(LauncherSession session, LocalizationServi
     public async Task SaveAsync()
     {
         if (snapshot == null || adapter == null) return;
-        if (session.Runner.IsRuntimeRunning(runtime)) throw new InvalidOperationException(l["RuntimeBusy"]);
+        if (session.Settings.Runtimes.Where(r => r.Id == runtime.Id || string.Equals(r.PreferencesPath, runtime.PreferencesPath, StringComparison.OrdinalIgnoreCase)).Any(session.Runner.IsRuntimeRunning))
+            throw new InvalidOperationException(l["RuntimeBusy"]);
         foreach (var pair in values) pending[pair.Key] = pair.Value();
         var changes = pending.Where(p => snapshot.Values[p.Key] != p.Value).ToDictionary(p => p.Key, p => p.Value);
         if (changes.Count > 0) await adapter.SaveAsync(snapshot, changes);
-        snapshot = await adapter.ReadAsync(runtime.PreferencesPath!); pending.Clear(); Build();
+        snapshot = await adapter.ReadAsync(runtime.PreferencesPath!); pending.Clear(); values.Clear(); Build();
     }
 }

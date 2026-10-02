@@ -21,6 +21,8 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
         var queued = new Queue<(string Path, AssetKind Hint)>();
         var usedIds = new HashSet<Guid>();
         var priorPaths = previous.Assets.ToDictionary(a => a.Path, StringComparer.OrdinalIgnoreCase);
+        var discovered = new List<ScenarioEntry>();
+        var priorScenarios = previous.Scenarios.ToDictionary(s => s.Id);
         foreach (var root in roots.DistinctBy(r => Path.GetFullPath(r.Path), StringComparer.OrdinalIgnoreCase))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -34,6 +36,7 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
             cancellationToken.ThrowIfCancellationRequested();
             bool firstVisit = seen.Add(file);
             if (!File.Exists(file) || !firstVisit && (candidate.Hint == AssetKind.Unknown || parsed.ContainsKey(file) || assets.Any(a => a.Path.Equals(file, StringComparison.OrdinalIgnoreCase)))) continue;
+            bool scenarioHeader = false;
             try
             {
                 var info = new FileInfo(file);
@@ -49,6 +52,7 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
                         await using var stream = File.OpenRead(file);
                         byte[] prefix = new byte[256]; int length = await stream.ReadAsync(prefix, cancellationToken).ConfigureAwait(false);
                         var header = System.Text.Encoding.ASCII.GetString(prefix, 0, length);
+                        scenarioHeader = header.Contains("BveTs Scenario", StringComparison.OrdinalIgnoreCase) || header.Contains("B\0v\0e\0T\0s\0 \0S\0c\0e\0n\0a\0r\0i\0o", StringComparison.OrdinalIgnoreCase);
                         if (candidate.Hint != AssetKind.Unknown || header.Contains("BveTs", StringComparison.OrdinalIgnoreCase) || header.Contains("B\0v\0e\0T\0s", StringComparison.OrdinalIgnoreCase))
                         {
                             data = await reader.ReadAsync(file, cancellationToken, candidate.Hint).ConfigureAwait(false);
@@ -66,6 +70,14 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
                     parsed[file] = data; diagnostics.AddRange(data.Diagnostics);
                     references.AddRange(data.References);
                     foreach (var reference in data.References.Where(r => r.Exists)) queued.Enqueue((reference.ResolvedPath, reference.TargetKind));
+                    if (kind == AssetKind.Scenario)
+                    {
+                        var old = priorScenarios.GetValueOrDefault(identity);
+                        string GetMetadata(string key) => data.Metadata.GetValueOrDefault(key) ?? "";
+                        discovered.Add(new(identity, file, GetMetadata("Title"), GetMetadata("RouteTitle"), GetMetadata("VehicleTitle"), GetMetadata("Author"), GetMetadata("Comment"), data.References.FirstOrDefault(r => r.Key == "Image")?.ResolvedPath, data.References, info.LastWriteTimeUtc, data.Fingerprint)
+                        { Alias = old?.Alias, CustomGroup = old?.CustomGroup, Favorite = old?.Favorite ?? false, Hidden = old?.Hidden ?? false, RuntimeId = old?.RuntimeId, DefaultVehiclePath = old?.DefaultVehiclePath, LastLaunchUtc = old?.LastLaunchUtc });
+                        if (discovered.Count == 8) { progress?.Report(new(seen.Count, parsed.Values.Count(p => p.Kind == AssetKind.Scenario), file, discovered.ToArray())); discovered.Clear(); }
+                    }
                 }
                 if (seen.Count % 32 == 0) progress?.Report(new(seen.Count, parsed.Values.Count(p => p.Kind == AssetKind.Scenario), file));
             }
@@ -74,9 +86,15 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
                 log.Write("Warning", "Asset scan failed: " + file, ex);
                 diagnostics.Add(new(Severity.Warning, "ParseFailed", file, Detail: ex.Message));
                 var old = previous.Scenarios.FirstOrDefault(s => s.Path.Equals(file, StringComparison.OrdinalIgnoreCase));
-                if (old != null) parsed[file] = new(AssetKind.Scenario, new Dictionary<string, string> { ["Title"] = old.Title }, old.References, [diagnostics[^1]], old.Fingerprint);
+                if (old != null || scenarioHeader)
+                {
+                    var identity = old?.Id ?? Guid.NewGuid(); var info = new FileInfo(file);
+                    assets.Add(new(identity, file, AssetKind.Scenario, info.Length, info.LastWriteTimeUtc, old?.Fingerprint));
+                    parsed[file] = new(AssetKind.Scenario, new Dictionary<string, string> { ["Title"] = old?.Title ?? Path.GetFileNameWithoutExtension(file) }, old?.References ?? [], [diagnostics[^1]], old?.Fingerprint ?? "");
+                }
             }
         }
+        if (discovered.Count > 0) progress?.Report(new(seen.Count, parsed.Values.Count(p => p.Kind == AssetKind.Scenario), "", discovered.ToArray()));
         foreach (var reference in references.Where(r => !r.Exists)) diagnostics.Add(new(Severity.Warning, "ReferenceMissing", reference.SourcePath, reference.RawPath, reference.ResolvedPath));
         var scenarios = new List<ScenarioEntry>(); var vehicles = new List<VehicleEntry>();
         foreach (var asset in assets)

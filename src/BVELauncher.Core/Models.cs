@@ -50,7 +50,7 @@ public sealed record LibrarySnapshot(IReadOnlyList<ScenarioEntry> Scenarios, IRe
 {
     public static LibrarySnapshot Empty => new([], [], [], [], []);
 }
-public sealed record ScanProgress(int Files, int Scenarios, string CurrentPath);
+public sealed record ScanProgress(int Files, int Scenarios, string CurrentPath, IReadOnlyList<ScenarioEntry>? Discovered = null);
 public sealed record VehicleOverride(string VehiclePath, string Title);
 public sealed record LaunchPlan(Guid ScenarioId, BveRuntime Runtime, string ScenarioPath, string WorkingDirectory,
     LaunchBehavior Behavior, string? GeneratedPath = null);

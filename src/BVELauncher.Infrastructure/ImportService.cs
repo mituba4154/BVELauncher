@@ -105,7 +105,7 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
                 journal.Files.Add(installed);
                 await SaveJournalAsync().ConfigureAwait(false);
                 Directory.CreateDirectory(Path.GetDirectoryName(operation.DestinationPath)!);
-                await AtomicFile.WriteAsync(operation.DestinationPath, await File.ReadAllBytesAsync(operation.StagedPath, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                await AtomicFile.CopyAsync(operation.StagedPath, operation.DestinationPath, cancellationToken).ConfigureAwait(false);
                 if (await AtomicFile.HashAsync(operation.DestinationPath, cancellationToken).ConfigureAwait(false) != operation.NewHash) throw new IOException("ImportVerificationFailed");
                 progress?.Report(new(journal.Files.Count, plan.Scenarios, operation.RelativePath));
             }
@@ -131,6 +131,7 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
     {
         foreach (var file in journal.Files.AsEnumerable().Reverse())
         {
+            if (PathSafety.ResolveInside(journal.Destination, Path.GetRelativePath(journal.Destination, file.Path)) != Path.GetFullPath(file.Path)) throw new InvalidDataException("JournalPathEscape");
             PathSafety.EnsureNoLinks(file.Path);
             if (!File.Exists(file.Path)) continue;
             var hash = await AtomicFile.HashAsync(file.Path, cancellationToken).ConfigureAwait(false);
@@ -138,8 +139,10 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
             if (hash != file.NewHash) throw new IOException("RollbackModifiedFile: " + file.Path);
             if (file.BackupPath != null)
             {
+                if (!Path.GetFullPath(file.BackupPath).StartsWith(Path.TrimEndingDirectorySeparator(Path.GetFullPath(paths.Backups)) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("JournalBackupEscape");
+                PathSafety.EnsureNoLinks(file.BackupPath);
                 if (await AtomicFile.HashAsync(file.BackupPath, cancellationToken).ConfigureAwait(false) != file.OriginalHash) throw new InvalidDataException("BackupIntegrity");
-                await AtomicFile.WriteAsync(file.Path, await File.ReadAllBytesAsync(file.BackupPath, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+                await AtomicFile.CopyAsync(file.BackupPath, file.Path, cancellationToken).ConfigureAwait(false);
             }
             else if (file.Ownership == Ownership.Managed) File.Delete(file.Path);
         }
@@ -151,6 +154,7 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
         var ownFiles = record.Files.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var file in record.Files)
         {
+            if (PathSafety.ResolveInside(record.Destination, Path.GetRelativePath(record.Destination, file.Path)) != Path.GetFullPath(file.Path)) throw new InvalidDataException("JournalPathEscape");
             cancellationToken.ThrowIfCancellationRequested(); PathSafety.EnsureNoLinks(file.Path);
             if (!File.Exists(file.Path)) continue;
             bool shared = otherInstallations.Any(r => r.Files.Any(f => f.Path.Equals(file.Path, StringComparison.OrdinalIgnoreCase))) ||
@@ -172,6 +176,7 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
             if (File.Exists(file))
             {
                 var journal = JsonSerializer.Deserialize<InstallJournal>(await File.ReadAllTextAsync(file, cancellationToken).ConfigureAwait(false)) ?? throw new InvalidDataException("InvalidJournal");
+                if (!Path.GetFileName(directory).Equals(journal.Id.ToString("N"), StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("JournalIdentityMismatch");
                 if (!journal.Committed)
                 {
                     var persisted = (await store.GetInstallationsAsync(cancellationToken).ConfigureAwait(false)).FirstOrDefault(r => r.Id == journal.Id && !r.RolledBack);

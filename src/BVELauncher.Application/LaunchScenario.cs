@@ -5,7 +5,7 @@ namespace BVELauncher.Application;
 public sealed class LaunchScenario(IAssetReader reader, IProcessRunner runner, ILibraryStore store, IEnumerable<IBveRuntimeAdapter> adapters)
 {
     public async Task<LaunchPlan> PrepareAsync(ScenarioEntry scenario, IEnumerable<BveRuntime> runtimes, AppSettings settings,
-        string generatedDirectory, VehicleOverride? vehicle = null, Guid? runtimeOverride = null, CancellationToken cancellationToken = default)
+        string generatedDirectory, VehicleOverride? vehicle = null, Guid? runtimeOverride = null, CancellationToken cancellationToken = default, bool useDefaultVehicle = true)
     {
         if (!File.Exists(scenario.Path)) throw new FileNotFoundException("ScenarioMissing", scenario.Path);
         var available = runtimes.Where(r => r.IsValid && File.Exists(r.ExecutablePath)).ToArray();
@@ -13,7 +13,7 @@ public sealed class LaunchScenario(IAssetReader reader, IProcessRunner runner, I
         var runtime = chosenId != null ? available.FirstOrDefault(r => r.Id == chosenId) :
             available.FirstOrDefault(r => r.Kind == scenario.Compatibility.RecommendedRuntime) ?? available.FirstOrDefault(r => r.Id == settings.DefaultRuntimeId) ?? available.OrderByDescending(r => r.Kind).FirstOrDefault();
         if (runtime == null) throw new FileNotFoundException("RuntimeMissing");
-        if (vehicle == null && scenario.DefaultVehiclePath != null) vehicle = new(scenario.DefaultVehiclePath, scenario.VehicleTitle);
+        if (vehicle == null && useDefaultVehicle && scenario.DefaultVehiclePath != null) vehicle = new(scenario.DefaultVehiclePath, scenario.VehicleTitle);
         var generated = vehicle == null ? null : await reader.MaterializeAsync(scenario.Path, vehicle, generatedDirectory, cancellationToken).ConfigureAwait(false);
         return adapters.Single(a => a.Kind == runtime.Kind).CreatePlan(scenario, runtime, generated ?? scenario.Path, settings.LaunchBehavior, generated);
     }

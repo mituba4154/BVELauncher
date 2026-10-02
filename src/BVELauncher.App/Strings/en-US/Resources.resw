@@ -891,4 +891,24 @@
   <data name="WarningSymbol" xml:space="preserve">
     <value>⚠</value>
   </data>
+  <data name="KeyboardPreset" xml:space="preserve">
+    <value>Key assignment preset</value>
+  </data>
+  <data name="ScreenResolution" xml:space="preserve">
+    <value>Screen resolution</value>
+  </data>
+  <data name="JapaneseLanguage" xml:space="preserve">
+    <value>日本語</value>
+  </data>
+  <data name="DesktopResolution" xml:space="preserve">
+    <value>Same as desktop</value>
+  </data>
+  <data name="EnglishLanguage" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Bve_FontSize" xml:space="preserve">
+    <value>Assistant font size</value>
+  </data>
+  <data name="ScenarioActions" xml:space="preserve"><value>Scenario actions</value></data>
+  <data name="ResetAssistantPositions" xml:space="preserve"><value>Restore assistant default positions</value></data>
 </root>

@@ -37,4 +37,14 @@ public sealed class BackupService(AppPaths paths) : IBackupService
         }
         return records.OrderByDescending(r => r.CreatedUtc).ToArray();
     }
+    public async Task ApplyRetentionAsync(int days, IReadOnlySet<string> protectedBackupPaths, CancellationToken cancellationToken = default)
+    {
+        var records = await ListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var record in records.Where(r => r.CreatedUtc < DateTime.UtcNow.AddDays(-Math.Max(1, days)) && !protectedBackupPaths.Contains(r.BackupPath)))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            // 自動削除の対象は管理されたバックアップ領域だけ。
+            PathSafety.DeleteOwnedDirectory(Path.GetDirectoryName(record.BackupPath)!, paths.Backups);
+        }
+    }
 }

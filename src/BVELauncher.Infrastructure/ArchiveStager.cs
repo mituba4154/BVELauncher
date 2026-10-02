@@ -19,7 +19,7 @@ public sealed class ArchiveStager(ImportLimits limits)
                 cancellationToken.ThrowIfCancellationRequested(); PathSafety.EnsureNoLinks(path);
                 var relative = Path.GetRelativePath(source, path);
                 var target = PathSafety.ResolveInside(destination, relative);
-                if (Directory.Exists(path)) { Directory.CreateDirectory(target); continue; }
+                if (Directory.Exists(path)) { RegisterDirectory(relative); continue; }
                 await using var input = File.OpenRead(path);
                 await CopyAsync(relative, input, input.Length, input.Length).ConfigureAwait(false);
             }
@@ -35,7 +35,7 @@ public sealed class ArchiveStager(ImportLimits limits)
                 if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
                 {
                     var directory = entry.FullName.TrimEnd('/', '\\');
-                    if (directory.Length > 0) Directory.CreateDirectory(PathSafety.ResolveInside(destination, directory));
+                    if (directory.Length > 0) RegisterDirectory(directory);
                     continue;
                 }
                 await using var input = entry.Open();
@@ -49,7 +49,7 @@ public sealed class ArchiveStager(ImportLimits limits)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!string.IsNullOrEmpty(entry.LinkTarget)) throw new InvalidDataException("ArchiveLink");
-                if (entry.IsDirectory) { Directory.CreateDirectory(PathSafety.ResolveInside(destination, entry.Key!.TrimEnd('/', '\\'))); continue; }
+                if (entry.IsDirectory) { RegisterDirectory(entry.Key!.TrimEnd('/', '\\')); continue; }
                 await using var input = entry.OpenEntryStream();
                 await CopyAsync(entry.Key!, input, entry.Size, entry.CompressedSize).ConfigureAwait(false);
             }
@@ -59,6 +59,13 @@ public sealed class ArchiveStager(ImportLimits limits)
             PathSafety.EnsureNoLinks(source);
             await using var input = File.OpenRead(source);
             await CopyAsync(Path.GetFileName(source), input, input.Length, input.Length).ConfigureAwait(false);
+        }
+        void RegisterDirectory(string relative)
+        {
+            var target = PathSafety.ResolveInside(destination, relative);
+            if (!seen.Add(target)) throw new InvalidDataException("ArchiveDuplicatePath");
+            if (++count > limits.MaxFiles) throw new InvalidDataException("ArchiveLimit");
+            Directory.CreateDirectory(target);
         }
         async Task CopyAsync(string relative, Stream input, long size, long compressed)
         {

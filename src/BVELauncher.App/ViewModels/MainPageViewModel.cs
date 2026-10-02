@@ -47,21 +47,26 @@ public partial class MainPageViewModel : ObservableObject
             GridView = session.Settings.GridView; Sort = session.Settings.Sort;
             session.Watch(() => context.Post(_ => RescanCommand.Execute(null), null));
             RefreshVisible();
-            await session.ScanAsync(new Progress<ScanProgress>(p => Status = localization.Format("Scanning", p.Files, p.Scenarios)), token);
+            await session.ScanAsync(new Progress<ScanProgress>(OnScanProgress), token);
         });
     }
-    [RelayCommand] private async Task RescanAsync() => await RunOperationAsync(token => session.ScanAsync(new Progress<ScanProgress>(p => Status = localization.Format("Scanning", p.Files, p.Scenarios)), token));
+    [RelayCommand] private async Task RescanAsync() => await RunOperationAsync(token => session.ScanAsync(new Progress<ScanProgress>(OnScanProgress), token));
+    private void OnScanProgress(ScanProgress progress)
+    {
+        if (progress.Discovered != null) session.AcceptDiscovered(progress.Discovered);
+        Status = localization.Format("Scanning", progress.Files, progress.Scenarios);
+    }
     [RelayCommand] private void Cancel() => operation?.Cancel();
     [RelayCommand] private async Task DriveAsync(ScenarioCardViewModel? card)
     {
         card ??= Selected; if (card == null) return;
-        await DriveWithVehicleAsync(card, null);
+        await DriveWithVehicleAsync(card, null, true);
     }
-    public async Task DriveWithVehicleAsync(ScenarioCardViewModel card, VehicleOverride? vehicle)
+    public async Task DriveWithVehicleAsync(ScenarioCardViewModel card, VehicleOverride? vehicle, bool useDefaultVehicle = false)
     {
         try
         {
-            var plan = await launch.PrepareAsync(card.Entry, session.Settings.Runtimes, session.Settings, session.Paths.Generated, vehicle);
+            var plan = await launch.PrepareAsync(card.Entry, session.Settings.Runtimes, session.Settings, session.Paths.Generated, vehicle, useDefaultVehicle: useDefaultVehicle);
             var running = await launch.ExecuteAsync(plan);
             card.IsRunning = true; card.Status = localization["Running"]; LaunchStarted?.Invoke(plan.Behavior);
             await session.UpdateScenarioAsync(card.Entry with { LastLaunchUtc = running.StartedUtc });

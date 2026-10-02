@@ -38,7 +38,7 @@ public sealed partial class SettingsWindow : Window
                 case "General":
                     Pick("ClickBehavior", [l["ClickLaunch"], l["ClickDetails"], l["ClickSelect"]], (int)session.Settings.ClickBehavior, (s, i) => s with { ClickBehavior = (ClickBehavior)i });
                     Pick("LaunchBehavior", [l["KeepVisible"], l["Minimize"], l["HideWindow"]], (int)session.Settings.LaunchBehavior, (s, i) => s with { LaunchBehavior = (LaunchBehavior)i });
-                    Pick("Language", ["日本語", "English"], l.Language == "en-US" ? 1 : 0, (s, i) => s with { Language = i == 1 ? "en-US" : "ja-JP" }); break;
+                    Pick("Language", [l["JapaneseLanguage"], l["EnglishLanguage"]], l.Language == "en-US" ? 1 : 0, (s, i) => s with { Language = i == 1 ? "en-US" : "ja-JP" }); break;
                 case "Appearance":
                     Pick("Theme", [l["System"], l["Light"], l["Dark"]], Array.IndexOf(new[] { "System", "Light", "Dark" }, session.Settings.Theme), (s, i) => s with { Theme = new[] { "System", "Light", "Dark" }[i] });
                     Pick("DefaultView", [l["Grid"], l["List"]], session.Settings.GridView ? 0 : 1, (s, i) => s with { GridView = i == 0 }); break;
@@ -48,7 +48,8 @@ public sealed partial class SettingsWindow : Window
                     Pick("DefaultRoot", session.Settings.Roots.Select(r => r.Path).ToArray(), Math.Max(0, session.Settings.Roots.FindIndex(r => r.Id == session.Settings.DefaultRootId)), (s, i) => s with { DefaultRootId = i < s.Roots.Count ? s.Roots[i].Id : null });
                     Pick("Conflict", [l["Ask"], l["Skip"], l["Overwrite"]], (int)session.Settings.ImportConflicts, (s, i) => s with { ImportConflicts = (ConflictBehavior)i });
                     var days = UiFactory.Identify(new NumberBox { Value = session.Settings.BackupRetentionDays, Minimum = 1, Maximum = 3650, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact }, "BackupDays", l["BackupDays"]);
-                    SettingsContent.Children.Add(UiFactory.Row(l["BackupDays"], days)); updates.Add(s => s with { BackupRetentionDays = (int)days.Value });
+                    NumberBoxAutomation.Attach(days, "BackupDays", l["BackupDays"]);
+                    SettingsContent.Children.Add(UiFactory.Row(l["BackupDays"], days)); updates.Add(s => s with { BackupRetentionDays = int.Parse(NumberBoxAutomation.ReadInteger(days), System.Globalization.CultureInfo.InvariantCulture) });
                     SettingsContent.Children.Add(Action("ImportHistory", ShowInstallationsAsync)); SettingsContent.Children.Add(Action("Backups", ShowBackupsAsync)); break;
                 case "Advanced":
                     SettingsContent.Children.Add(Action("Rebuild", async () => { await session.ScanAsync(null, CancellationToken.None); SettingsStatus.Text = l["Saved"]; }));

@@ -10,6 +10,7 @@
         <TextBlock Grid.Row="1" Text="{x:Bind Title,Mode=OneWay}" Style="{StaticResource BodyStrongTextBlockStyle}" TextTrimming="CharacterEllipsis" />
         <Grid Grid.Row="2"><TextBlock Text="{x:Bind VehicleTitle,Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}" TextTrimming="CharacterEllipsis" Margin="0,0,40,0"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="4"><TextBlock Text="{x:Bind Favorite,Mode=OneWay}"/><TextBlock Text="{x:Bind Warning,Mode=OneWay}" /></StackPanel></Grid>
         <TextBlock Text="{x:Bind Status,Mode=OneWay}" VerticalAlignment="Bottom" HorizontalAlignment="Right" />
+        <Button Content="⋯" HorizontalAlignment="Right" VerticalAlignment="Top" Click="ScenarioActions_Click" Loaded="ScenarioActions_Loaded"/>
       </Grid>
     </DataTemplate>
     <DataTemplate x:Key="ListTemplate" x:DataType="vm:ScenarioCardViewModel">
@@ -19,7 +20,7 @@
         <TextBlock Grid.Column="1" Text="{x:Bind Title,Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
         <TextBlock Grid.Column="2" Text="{x:Bind VehicleTitle,Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
         <TextBlock Grid.Column="3" Text="{x:Bind RouteTitle,Mode=OneWay}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Text="{x:Bind Warning,Mode=OneWay}"/><TextBlock Text="{x:Bind Status,Mode=OneWay}"/></StackPanel>
+        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><TextBlock Text="{x:Bind Warning,Mode=OneWay}"/><TextBlock Text="{x:Bind Status,Mode=OneWay}"/><Button Content="⋯" Click="ScenarioActions_Click" Loaded="ScenarioActions_Loaded"/></StackPanel>
       </Grid>
     </DataTemplate>
     <DataTemplate x:Key="GroupTemplate" x:DataType="vm:ScenarioGroup"><Button Content="{x:Bind Title,Mode=OneWay}" Tag="{x:Bind Title}" Click="Group_Click" AutomationProperties.AutomationId="GroupToggle" Margin="8,12,0,8"/></DataTemplate>

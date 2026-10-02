@@ -21,7 +21,9 @@ public sealed class SqliteLibraryStore(AppPaths paths, ILocalLog log) : ILibrary
         catch (SqliteException ex) when (ex.SqliteErrorCode is 11 or 26)
         {
             log.Write("Warning", "Database corruption; preserving database and rebuilding index.", ex);
-            File.Move(paths.Database, paths.Database + ".corrupt-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff"));
+            string preserved = paths.Database + ".corrupt-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            File.Move(paths.Database, preserved);
+            foreach (var suffix in new[] { "-wal", "-shm" }) if (File.Exists(paths.Database + suffix)) File.Move(paths.Database + suffix, preserved + suffix);
             Initialize();
         }
         void Initialize()

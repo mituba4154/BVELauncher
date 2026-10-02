@@ -1,4 +1,7 @@
 using System.IO.Compression;
+using SharpCompress.Common;
+using SharpCompress.Writers;
+using SharpCompress.Writers.SevenZip;
 using BVELauncher.Application;
 using BVELauncher.Bve;
 using BVELauncher.Core;
@@ -8,6 +11,20 @@ namespace BVELauncher.IntegrationTests;
 
 public sealed class ImportTests
 {
+    [Fact]
+    public async Task SevenZipIsStagedAndInstalled()
+    {
+        using var env = new TestEnvironment(); await env.Store.InitializeAsync();
+        var source = Path.Combine(env.Root, "addon.7z");
+        using (var stream = File.Create(source))
+        using (var writer = WriterFactory.OpenWriter(stream, ArchiveType.SevenZip, new SevenZipWriterOptions()))
+        using (var content = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("BveTs Vehicle 2.00\nPanel = panel.txt\n")))
+            writer.Write("Scenarios/Vehicle/vehicle.txt", content, DateTime.UtcNow);
+        var service = Service(env); var plan = await service.AnalyzeAsync(new(source), env.Content);
+        Assert.Equal(1, plan.Vehicles);
+        await service.CommitAsync(plan, ConflictBehavior.Skip);
+        Assert.True(File.Exists(Path.Combine(env.Content, "Vehicle", "vehicle.txt")));
+    }
     [Theory]
     [InlineData("Scenarios/route/scenario.txt", "route/scenario.txt")]
     [InlineData("package/Scenarios/route/scenario.txt", "route/scenario.txt")]

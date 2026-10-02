@@ -1,0 +1,15 @@
+BveTs Vehicle Performance 2.00
+[Power]
+Force = force.csv
+MaxForce = force.csv
+Current = current.csv
+MaxCurrent = current.csv
+NoLoadCurrent = zero.csv
+Params = control.csv
+[Brake]
+Force = force.csv
+MaxForce = force.csv
+Current = current.csv
+MaxCurrent = current.csv
+NoLoadCurrent = zero.csv
+Params = control.csv

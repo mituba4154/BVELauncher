@@ -88,9 +88,7 @@ public sealed class BveAssetReader : IAssetReader
         document.Set("VehicleTitle", vehicle.Title);
         try
         {
-            await using var stream = new FileStream(generated, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, true);
-            await stream.WriteAsync(document.ToBytes(), cancellationToken).ConfigureAwait(false);
-            await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await WriteGeneratedAsync(generated).ConfigureAwait(false);
             return generated;
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
@@ -106,8 +104,19 @@ public sealed class BveAssetReader : IAssetReader
             }
             document.Set("Vehicle", Path.GetRelativePath(fallbackDirectory, vehicle.VehiclePath));
             generated = Path.Combine(fallbackDirectory, ".BVELauncher-" + Guid.NewGuid().ToString("N") + ".txt");
-            await File.WriteAllBytesAsync(generated, document.ToBytes(), cancellationToken).ConfigureAwait(false);
+            await WriteGeneratedAsync(generated).ConfigureAwait(false);
             return generated;
+        }
+        async Task WriteGeneratedAsync(string path)
+        {
+            bool created = false;
+            try
+            {
+                await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read, 4096, true);
+                created = true; await stream.WriteAsync(document.ToBytes(), cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false); stream.Flush(true);
+            }
+            catch { if (created && File.Exists(path)) File.Delete(path); throw; }
         }
     }
     public static string Resolve(string source, string reference) => Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.GetFullPath(source))!, reference.Trim().Replace('\\', Path.DirectorySeparatorChar)));
