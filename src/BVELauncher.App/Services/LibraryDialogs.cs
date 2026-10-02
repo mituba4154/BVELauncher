@@ -11,22 +11,14 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
     public async Task ErrorAsync(string message) => await UiFactory.Dialog(root, l["Error"], l["Close"], UiFactory.Text(message)).ShowAsync();
     public async Task DetailsAsync(ScenarioCardViewModel card)
     {
-        var form = UiFactory.Form();
-        foreach (var (key, value) in new[] { ("Title", card.Entry.Title), ("Route", card.Entry.RouteTitle), ("Vehicle", card.Entry.VehicleTitle), ("Author", card.Entry.Author), ("Comment", card.Entry.Comment), ("Path", card.Entry.Path) })
-            form.Children.Add(UiFactory.Row(l[key], UiFactory.Text(value)));
-        var alias = UiFactory.Identify(new TextBox { Text = card.Entry.Alias ?? "" }, "ScenarioAlias", l["Alias"]);
-        var group = UiFactory.Identify(new TextBox { Text = card.Entry.CustomGroup ?? "" }, "ScenarioGroup", l["Group"]);
-        var runtimes = session.Settings.Runtimes;
-        var runtime = UiFactory.Identify(new ListView { ItemsSource = new[] { l["Auto"] }.Concat(runtimes.Select(r => (r.Kind == RuntimeKind.Bve6 ? l["Bve6"] : l["Bve5"]) + " " + r.Version + " · " + Path.GetFileName(r.InstallDirectory))).ToArray(), MaxHeight = 144, SelectionMode = ListViewSelectionMode.Single }, "ScenarioRuntime", l["Runtime"]);
-        runtime.SelectedIndex = card.Entry.RuntimeId == null ? 0 : runtimes.FindIndex(r => r.Id == card.Entry.RuntimeId) + 1;
-        var vehicles = session.Library.Vehicles;
-        var vehicle = UiFactory.Identify(new ListView { ItemsSource = new[] { l["StandardVehicle"] }.Concat(vehicles.Select(v => v.DisplayName)).ToArray(), MaxHeight = 144, SelectionMode = ListViewSelectionMode.Single }, "ScenarioVehicle", l["DefaultVehicle"]);
-        vehicle.SelectedIndex = card.Entry.DefaultVehiclePath == null ? 0 : vehicles.ToList().FindIndex(v => v.Path.Equals(card.Entry.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase)) + 1;
-        form.Children.Add(UiFactory.Row(l["Alias"], alias)); form.Children.Add(UiFactory.Row(l["Group"], group)); form.Children.Add(UiFactory.Row(l["Runtime"], runtime)); form.Children.Add(UiFactory.Row(l["DefaultVehicle"], vehicle));
-        var dialog = UiFactory.Dialog(root, l["ScenarioSettings"], l["Cancel"], new ScrollViewer { Content = form, MaxHeight = 580 }); dialog.PrimaryButtonText = l["Save"];
-        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
-            await session.UpdateScenarioAsync(card.Entry with { Alias = alias.Text.Length == 0 ? null : alias.Text, CustomGroup = group.Text.Length == 0 ? null : group.Text, RuntimeId = runtime.SelectedIndex <= 0 ? null : runtimes[runtime.SelectedIndex - 1].Id, DefaultVehiclePath = vehicle.SelectedIndex <= 0 ? null : vehicles[vehicle.SelectedIndex - 1].Path });
+        if (scenarioSettingsWindow != null) { scenarioSettingsWindow.Activate(); return; }
+        scenarioSettingsWindow = new(session, l, card);
+        scenarioSettingsWindow.Activate();
+        try { await scenarioSettingsWindow.Completion; }
+        finally { scenarioSettingsWindow = null; }
     }
+    private ScenarioSettingsWindow? scenarioSettingsWindow;
+    public void CloseScenarioSettings() => scenarioSettingsWindow?.Close();
     public async Task GroupAsync(ScenarioCardViewModel card)
     {
         var field = UiFactory.Identify(new TextBox { Text = card.Entry.CustomGroup ?? "", Header = l["Group"] }, "GroupName", l["Group"]);

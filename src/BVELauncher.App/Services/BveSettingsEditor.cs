@@ -16,10 +16,14 @@ public sealed class BveSettingsEditor(LauncherSession session, LocalizationServi
     private readonly Dictionary<string, Func<string>> values = [];
     private readonly Dictionary<string, string> pending = [];
     private string category = "Graphics";
+    private IReadOnlyList<InputDeviceFile> inputDevices = [];
     public async Task LoadAsync()
     {
         adapter = App.Services.GetServices<IBveSettingsAdapter>().Single(a => a.Kind == runtime.Kind);
         snapshot = await adapter.ReadAsync(runtime.PreferencesPath!);
+        try { inputDevices = await Task.Run(() => InputDeviceCatalog.Read(runtime.InstallDirectory)); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        { await session.ReportErrorAsync("Input device metadata read", ex); inputDevices = []; }
         Build();
     }
     private void Build()
@@ -58,7 +62,21 @@ public sealed class BveSettingsEditor(LauncherSession session, LocalizationServi
         {
             var label = l[definition.ResourceKey]; var current = pending.GetValueOrDefault(definition.Property) ?? snapshot.Values[definition.Property];
             Microsoft.UI.Xaml.FrameworkElement control;
-            if (definition.Type == SettingType.Boolean)
+            if (definition.Property == "InputPlugins")
+            {
+                var enabled = current.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var devices = inputDevices.ToList();
+                foreach (var key in enabled.Where(key => !devices.Any(d => d.Key.Equals(key, StringComparison.OrdinalIgnoreCase)))) devices.Add(new(key, key + " · " + l["NoExtension"], "", ""));
+                var options = new Dictionary<string, CheckBox>(); var panel = new StackPanel { Spacing = 8 };
+                foreach (var device in devices)
+                {
+                    var box = UiFactory.Identify(new CheckBox { Content = device.Name + (device.Version.Length == 0 ? "" : " · " + device.Version), IsChecked = enabled.Contains(device.Key) }, "BveInputDevice" + device.Key, device.Name);
+                    ToolTipService.SetToolTip(box, device.Path); options[device.Key] = box; panel.Children.Add(box);
+                }
+                if (devices.Count == 0) panel.Children.Add(UiFactory.Text(l["NoExtension"]));
+                values[definition.Property] = () => string.Join('|', options.Where(p => p.Value.IsChecked == true).Select(p => p.Key)); control = panel;
+            }
+            else if (definition.Type == SettingType.Boolean)
             {
                 var toggle = UiFactory.Identify(new ToggleSwitch { IsOn = current == "true" }, "Bve" + definition.Property, label); values[definition.Property] = () => toggle.IsOn ? "true" : "false"; control = toggle;
             }

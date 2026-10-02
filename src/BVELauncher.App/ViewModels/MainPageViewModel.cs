@@ -17,7 +17,10 @@ public partial class MainPageViewModel : ObservableObject
     private readonly SynchronizationContext context;
     private CancellationTokenSource? operation;
     private CancellationTokenSource? searchCancellation;
+    private bool refreshPending;
+    private bool rescanPending;
     private readonly Dictionary<Guid, ScenarioCardViewModel> cards = [];
+    private readonly Dictionary<Guid, (string? Path, DateTime Stamp, long Size)> thumbnailVersions = [];
     public ObservableCollection<ScenarioGroup> Groups { get; } = [];
     public ObservableCollection<ScenarioCardViewModel> VisibleScenarios { get; } = [];
     public Func<ScenarioCardViewModel, Task>? DetailsRequested { get; set; }
@@ -36,7 +39,7 @@ public partial class MainPageViewModel : ObservableObject
     {
         (this.session, this.localization, this.launch, this.thumbnails) = (session, localization, launch, thumbnails);
         context = SynchronizationContext.Current ?? throw new InvalidOperationException("UI synchronization context required.");
-        session.LibraryChanged += () => context.Post(_ => RefreshVisible(), null);
+        session.LibraryChanged += () => context.Post(_ => QueueRefresh(), null);
     }
     public async Task InitializeAsync()
     {
@@ -45,12 +48,29 @@ public partial class MainPageViewModel : ObservableObject
             await session.InitializeAsync(token);
             if (session.Settings.Language.Length > 0) localization.SetLanguage(session.Settings.Language);
             GridView = session.Settings.GridView; Sort = session.Settings.Sort;
-            session.Watch(() => context.Post(_ => RescanCommand.Execute(null), null));
+            session.Watch(() => context.Post(_ => RequestRescan(), null));
             RefreshVisible();
             await session.ScanAsync(new Progress<ScanProgress>(OnScanProgress), token);
         });
     }
     [RelayCommand] private async Task RescanAsync() => await RunOperationAsync(token => session.ScanAsync(new Progress<ScanProgress>(OnScanProgress), token));
+    public void RequestRescan()
+    {
+        if (IsBusy) { rescanPending = true; return; }
+        RescanCommand.Execute(null);
+    }
+    private void QueueRefresh()
+    {
+        if (refreshPending) return;
+        refreshPending = true;
+        _ = RefreshLaterAsync();
+    }
+    private async Task RefreshLaterAsync()
+    {
+        await Task.Delay(120);
+        refreshPending = false;
+        RefreshVisible();
+    }
     private void OnScanProgress(ScanProgress progress)
     {
         if (progress.Discovered != null) session.AcceptDiscovered(progress.Discovered);
@@ -66,10 +86,12 @@ public partial class MainPageViewModel : ObservableObject
     {
         try
         {
-            var plan = await launch.PrepareAsync(card.Entry, session.Settings.Runtimes, session.Settings, session.Paths.Generated, vehicle, useDefaultVehicle: useDefaultVehicle);
+            var selection = await session.ResolveLaunchVehicleAsync(card.Entry, vehicle, useDefaultVehicle);
+            var plan = await launch.PrepareAsync(selection.Scenario, session.Settings.Runtimes, session.Settings, session.Paths.Generated, selection.Vehicle, useDefaultVehicle: false);
             var running = await launch.ExecuteAsync(plan);
             card.IsRunning = true; card.Status = localization["Running"]; LaunchStarted?.Invoke(plan.Behavior);
-            await session.UpdateScenarioAsync(card.Entry with { LastLaunchUtc = running.StartedUtc });
+            try { await session.UpdateScenarioAsync(card.Entry with { LastLaunchUtc = running.StartedUtc }); }
+            catch (Exception ex) { await session.ReportErrorAsync("Launch metadata update", ex); }
             await launch.WaitAsync(running);
             card.IsRunning = false; card.Status = ""; LaunchEnded?.Invoke();
         }
@@ -103,23 +125,36 @@ public partial class MainPageViewModel : ObservableObject
     {
         var selectedId = Selected?.Id;
         var visible = LibraryQuery.Apply(session.Library.Scenarios, SearchText, Filter, Sort, CultureInfo.GetCultureInfo(localization.Language));
+        var imageFiles = session.Library.Assets.Where(a => a.Kind == AssetKind.Image).ToDictionary(a => a.Path, StringComparer.OrdinalIgnoreCase);
         foreach (var entry in session.Library.Scenarios)
         {
             if (cards.TryGetValue(entry.Id, out var card)) card.Update(entry);
-            else { card = new(entry); cards[entry.Id] = card; _ = LoadThumbnailAsync(card); }
+            else { card = new(entry); cards[entry.Id] = card; }
+            var image = entry.ImagePath == null ? null : imageFiles.GetValueOrDefault(entry.ImagePath);
+            var version = (entry.ImagePath, image?.LastWriteUtc ?? DateTime.MinValue, image?.Size ?? 0);
+            if (!thumbnailVersions.TryGetValue(entry.Id, out var previous) || previous != version)
+            { thumbnailVersions[entry.Id] = version; card.ThumbnailPath = null; _ = LoadThumbnailAsync(card, version); }
         }
-        foreach (var removed in cards.Keys.Except(session.Library.Scenarios.Select(s => s.Id)).ToArray()) cards.Remove(removed);
+        foreach (var removed in cards.Keys.Except(session.Library.Scenarios.Select(s => s.Id)).ToArray()) { cards.Remove(removed); thumbnailVersions.Remove(removed); }
         var visibleCards = visible.Select(s => cards[s.Id]).ToArray();
-        VisibleScenarios.Clear(); foreach (var card in visibleCards) VisibleScenarios.Add(card);
-        Groups.Clear();
+        CollectionSynchronization.Update(VisibleScenarios, visibleCards);
+        var existingGroups = Groups.ToDictionary(g => g.Title);
+        var desiredGroups = new List<ScenarioGroup>();
         foreach (var group in visibleCards.GroupBy(c => c.Entry.Group.Length == 0 ? localization["Other"] : c.Entry.Group))
-            Groups.Add(new(group.Key, session.Settings.CollapsedGroups.Contains(group.Key) ? [] : group));
+        {
+            if (!existingGroups.TryGetValue(group.Key, out var target)) target = new(group.Key, []);
+            CollectionSynchronization.Update(target.Items, session.Settings.CollapsedGroups.Contains(group.Key) ? [] : group.ToArray());
+            desiredGroups.Add(target);
+        }
+        CollectionSynchronization.Update(Groups, desiredGroups);
         Selected = selectedId.HasValue ? visibleCards.FirstOrDefault(c => c.Id == selectedId) : null;
         IsEmpty = visibleCards.Length == 0; Status = localization.Format("Count", visibleCards.Length);
     }
-    private async Task LoadThumbnailAsync(ScenarioCardViewModel card)
+    private async Task LoadThumbnailAsync(ScenarioCardViewModel card, (string? Path, DateTime Stamp, long Size) version)
     {
-        card.ThumbnailPath = await thumbnails.GetAsync(card.ImagePath, CancellationToken.None);
+        var thumbnail = await thumbnails.GetAsync(version.Path, CancellationToken.None);
+        // 遅れて完了した旧画像の処理で、新しい画像を上書きしない。
+        if (thumbnailVersions.TryGetValue(card.Id, out var current) && current == version) card.ThumbnailPath = thumbnail;
     }
     public async Task ToggleGroupAsync(string title)
     {
@@ -134,7 +169,11 @@ public partial class MainPageViewModel : ObservableObject
         try { await work(operation.Token); }
         catch (OperationCanceledException) { Status = localization["Cancel"]; }
         catch (Exception ex) { await ShowErrorAsync(ex); }
-        finally { IsBusy = false; operation.Dispose(); operation = null; }
+        finally
+        {
+            IsBusy = false; operation.Dispose(); operation = null;
+            if (rescanPending) { rescanPending = false; context.Post(_ => RequestRescan(), null); }
+        }
     }
     public async Task ShowErrorAsync(Exception error)
     {

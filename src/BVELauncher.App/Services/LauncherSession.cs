@@ -19,6 +19,7 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
     public LibrarySnapshot Library { get; private set; } = LibrarySnapshot.Empty;
     public event Action? LibraryChanged;
     private Action? watchCallback;
+    private readonly SemaphoreSlim scanGate = new(1, 1);
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
         await store.InitializeAsync(cancellationToken);
@@ -39,12 +40,18 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
     }
     public async Task ScanAsync(IProgress<ScanProgress>? progress, CancellationToken cancellationToken)
     {
-        Library = await scanner.ScanAsync(Settings.Roots, progress, cancellationToken);
-        LibraryChanged?.Invoke();
-        var reports = await Task.WhenAll(Library.Scenarios.Select(s => diagnostics.DiagnoseAsync(s, Library, Settings.Runtimes.FirstOrDefault(r => r.Id == s.RuntimeId), cancellationToken)));
-        Library = Library with { Scenarios = Library.Scenarios.Select((s, i) => s with { Compatibility = reports[i] }).ToArray() };
-        await store.SaveAsync(Library, cancellationToken);
-        LibraryChanged?.Invoke();
+        await scanGate.WaitAsync(cancellationToken);
+        try
+        {
+            var indexed = await scanner.ScanAsync(Settings.Roots, progress, cancellationToken);
+            Library = indexed; LibraryChanged?.Invoke();
+            var reports = await Task.WhenAll(indexed.Scenarios.Select(s => diagnostics.DiagnoseAsync(s, indexed, Settings.Runtimes.FirstOrDefault(r => r.Id == s.RuntimeId), cancellationToken)));
+            await store.SaveAsync(indexed with { Scenarios = indexed.Scenarios.Select((s, i) => s with { Compatibility = reports[i] }).ToArray() }, cancellationToken);
+            // 走査中に保存されたaliasやfavoriteも、DBがマージした値で表示する。
+            Library = (await store.LoadAsync(cancellationToken)) with { Diagnostics = indexed.Diagnostics };
+            LibraryChanged?.Invoke();
+        }
+        finally { scanGate.Release(); }
     }
     public void Watch(Action changed) { watchCallback = changed; watcher.Watch(Settings.Roots.Select(r => r.Path), changed); }
     public void StopWatching() => watcher.Dispose();
@@ -67,6 +74,20 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
         await store.UpdateScenarioAsync(entry, cancellationToken);
         Library = Library with { Scenarios = Library.Scenarios.Select(s => s.Id == entry.Id ? entry : s).ToArray() };
         LibraryChanged?.Invoke();
+    }
+    public async Task<(ScenarioEntry Scenario, VehicleOverride? Vehicle)> ResolveLaunchVehicleAsync(ScenarioEntry scenario, VehicleOverride? vehicle, bool useDefaultVehicle)
+    {
+        if (vehicle == null && useDefaultVehicle && scenario.DefaultVehiclePath != null)
+        {
+            var selected = Library.Vehicles.FirstOrDefault(v => v.Path.Equals(scenario.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase));
+            vehicle = new(scenario.DefaultVehiclePath, selected?.DisplayName ?? Path.GetFileNameWithoutExtension(scenario.DefaultVehiclePath));
+        }
+        if (vehicle == null) return (scenario, null);
+        var reference = new AssetReference(scenario.Path, "Vehicle", Path.GetRelativePath(Path.GetDirectoryName(scenario.Path)!, vehicle.VehiclePath), vehicle.VehiclePath, AssetKind.Vehicle, File.Exists(vehicle.VehiclePath));
+        var effective = scenario with { References = scenario.References.Where(r => r.TargetKind != AssetKind.Vehicle).Append(reference).ToArray() };
+        var graph = Library with { References = Library.References.Where(r => !r.SourcePath.Equals(scenario.Path, StringComparison.OrdinalIgnoreCase) || r.TargetKind != AssetKind.Vehicle).Append(reference).ToArray() };
+        effective = effective with { Compatibility = await diagnostics.DiagnoseAsync(effective, graph, Settings.Runtimes.FirstOrDefault(r => r.Id == scenario.RuntimeId)) };
+        return (effective, vehicle);
     }
     public async Task ReportErrorAsync(string operation, Exception error)
     { log.Write("Error", operation, error); await Task.CompletedTask; }

@@ -5,6 +5,19 @@ namespace BVELauncher.IntegrationTests;
 
 public sealed class BveFixtureTests
 {
+    [Fact]
+    public async Task InputPluginListChangesPreserveUnknownChildrenAttributesAndComments()
+    {
+        using var env = new TestEnvironment(); var path = Path.Combine(env.Content, "preferences.xml");
+        await File.WriteAllTextAsync(path, "<Preferences>\r\n<InputPlugins future=\"keep\">\r\n<!--keep--><string hint=\"keep\">old</string><Future x=\"1\">opaque</Future><string>remove</string>\r\n</InputPlugins>\r\n</Preferences>");
+        var adapter = new Bve6SettingsAdapter(env.Backups); var snapshot = await adapter.ReadAsync(path);
+        await adapter.SaveAsync(snapshot, new Dictionary<string, string> { ["InputPlugins"] = "new" });
+        var saved = await File.ReadAllTextAsync(path);
+        Assert.Contains("<InputPlugins future=\"keep\">\r\n<!--keep--><string hint=\"keep\">new</string><Future x=\"1\">opaque</Future>", saved);
+        Assert.DoesNotContain("remove", saved); Assert.Equal("new", (await adapter.ReadAsync(path)).Values["InputPlugins"]);
+        await adapter.SaveAsync(await adapter.ReadAsync(path), new Dictionary<string, string> { ["InputPlugins"] = "" });
+        Assert.Contains("<Future x=\"1\">opaque</Future>", await File.ReadAllTextAsync(path));
+    }
     [Theory]
     [InlineData("Preferences.xml", RuntimeKind.Bve5)]
     [InlineData("BveTs6.Preferences.xml", RuntimeKind.Bve6)]

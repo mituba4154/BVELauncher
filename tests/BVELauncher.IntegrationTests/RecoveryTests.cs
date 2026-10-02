@@ -11,6 +11,41 @@ namespace BVELauncher.IntegrationTests;
 public sealed class RecoveryTests
 {
     [Fact]
+    public async Task AtomicCopyRejectsUnexpectedContentBeforeReplacingExistingFile()
+    {
+        using var env = new TestEnvironment(); var source = Path.Combine(env.Root, "source.txt"); var destination = Path.Combine(env.Content, "keep.txt");
+        await File.WriteAllTextAsync(source, "unexpected"); await File.WriteAllTextAsync(destination, "original");
+        await Assert.ThrowsAsync<InvalidDataException>(() => AtomicFile.CopyAsync(source, destination, expectedHash: new string('0', 64)));
+        Assert.Equal("original", await File.ReadAllTextAsync(destination)); Assert.Single(Directory.GetFiles(env.Content));
+    }
+    [Fact]
+    public async Task InputDevicesUseNativeLowercaseExtensionlessKeysWithoutLoadingDll()
+    {
+        using var env = new TestEnvironment(); var directory = Path.Combine(env.Content, "Input Devices"); Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, "Example.Input.dll"), "self authored invalid PE");
+        var device = Assert.Single(InputDeviceCatalog.Read(env.Content)); Assert.Equal("example.input", device.Key);
+    }
+    [Fact]
+    public async Task MarkerWriteFailureRemovesUnlaunchedGeneratedFile()
+    {
+        using var env = new TestEnvironment();
+        var impossiblePaths = new AppPaths(Path.Combine(env.Root, "OtherApp"));
+        Directory.CreateDirectory(impossiblePaths.Root); await File.WriteAllTextAsync(impossiblePaths.Generated, "blocks directory creation");
+        var generated = Path.Combine(env.Content, ".BVELauncher-" + Guid.NewGuid().ToString("N") + ".txt"); await File.WriteAllTextAsync(generated, "owned");
+        var runtime = new BveRuntime(Guid.NewGuid(), RuntimeKind.Bve6, "6", "missing.exe", CpuArchitecture.X64, env.Root, true);
+        await Assert.ThrowsAnyAsync<IOException>(() => new ProcessRunner(impossiblePaths, env.Log).StartAsync(new(Guid.NewGuid(), runtime, generated, env.Root, LaunchBehavior.KeepVisible, generated), default));
+        Assert.False(File.Exists(generated));
+    }
+    [Fact]
+    public async Task HistoryFailureAfterLaunchStillReturnsTrackableProcess()
+    {
+        using var env = new TestEnvironment(); var runner = new RecordingRunner();
+        var runtime = new BveRuntime(Guid.NewGuid(), RuntimeKind.Bve6, "6", "unused.exe", CpuArchitecture.X64, env.Root, true);
+        var useCase = new LaunchScenario(new BveAssetReader(), runner, new BrokenHistoryStore(), [], env.Log);
+        var result = await useCase.ExecuteAsync(new(Guid.NewGuid(), runtime, "unused.txt", env.Root, LaunchBehavior.Hide));
+        Assert.Equal(12345, result.ProcessId); await useCase.WaitAsync(result); Assert.True(runner.Waited);
+    }
+    [Fact]
     public async Task MigrationBacksUpVersionOneAndRetainsUserOverridesDuringStaleScan()
     {
         using var env = new TestEnvironment(); await env.Store.InitializeAsync();
@@ -79,9 +114,27 @@ public sealed class RecoveryTests
     [Fact]
     public async Task ExtensionDetectionReadsPresenceWithoutLoadingDllAndRejectsUnrelatedInstaller()
     {
-        using var env = new TestEnvironment(); var dll = Path.Combine(env.Content, "BveEx.test.dll"); await File.WriteAllTextAsync(dll, "self authored invalid PE");
+        using var env = new TestEnvironment(); var input = Path.Combine(env.Content, "Input Devices"); Directory.CreateDirectory(input);
+        var dll = Path.Combine(input, "BveEx.test.dll"); await File.WriteAllTextAsync(dll, "self authored invalid PE");
         var runtime = new BveRuntime(Guid.NewGuid(), RuntimeKind.Bve6, "6", "", CpuArchitecture.X64, env.Content, true);
         var detector = new ExtensionDetector(); Assert.Equal(dll, Assert.Single(await detector.DetectAsync([runtime])).Path);
         await Assert.ThrowsAsync<InvalidDataException>(() => detector.RunLocalInstallerAsync(dll));
+    }
+    private sealed class RecordingRunner : IProcessRunner
+    {
+        public bool Waited { get; private set; }
+        public Task<RunningLaunch> StartAsync(LaunchPlan plan, CancellationToken token) => Task.FromResult(new RunningLaunch(12345, plan, DateTime.UtcNow));
+        public Task WaitForExitAsync(int id, CancellationToken token) { Waited = true; return Task.CompletedTask; }
+        public bool IsRuntimeRunning(BveRuntime runtime) => false;
+    }
+    private sealed class BrokenHistoryStore : ILibraryStore
+    {
+        public Task RecordLaunchAsync(Guid id, DateTime time, CancellationToken token = default) => throw new IOException("disk failure");
+        public Task InitializeAsync(CancellationToken token = default) => throw new NotSupportedException();
+        public Task<LibrarySnapshot> LoadAsync(CancellationToken token = default) => throw new NotSupportedException();
+        public Task SaveAsync(LibrarySnapshot snapshot, CancellationToken token = default) => throw new NotSupportedException();
+        public Task UpdateScenarioAsync(ScenarioEntry entry, CancellationToken token = default) => throw new NotSupportedException();
+        public Task SaveInstallationAsync(InstallationRecord record, CancellationToken token = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<InstallationRecord>> GetInstallationsAsync(CancellationToken token = default) => throw new NotSupportedException();
     }
 }

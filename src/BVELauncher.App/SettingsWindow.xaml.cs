@@ -159,6 +159,12 @@ public sealed partial class SettingsWindow : Window
     private async Task GuardAsync(Func<Task> action)
     {
         try { await action(); }
-        catch (Exception ex) { await session.ReportErrorAsync("Settings", ex); SettingsStatus.Text = l.Format("OperationFailed", ex.Message); }
+        catch (Exception ex)
+        {
+            await session.ReportErrorAsync("Settings", ex);
+            try { SettingsStatus.Text = l[ex.Message.Split(':')[0]]; }
+            catch (Exception missing) when (missing is System.Runtime.InteropServices.COMException or ArgumentException)
+            { SettingsStatus.Text = l.Format("OperationFailed", ex.Message); }
+        }
     }
 }

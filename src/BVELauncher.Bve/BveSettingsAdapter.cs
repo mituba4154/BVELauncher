@@ -24,6 +24,7 @@ public abstract class BveSettingsAdapter(IBackupService backups) : IBveSettingsA
         if (Convert.ToHexString(SHA256.HashData(bytes)) != snapshot.OriginalHash) throw new IOException("SettingsChanged");
         var document = Load(bytes);
         var replacements = new Dictionary<XmlNode, string>();
+        var stringLists = new Dictionary<XmlNode, IReadOnlyList<string>>();
         var append = new HashSet<XmlNode>();
         foreach (var (property, value) in changes)
         {
@@ -41,9 +42,9 @@ public abstract class BveSettingsAdapter(IBackupService backups) : IBveSettingsA
                 foreach (var name in value.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
                 {
                     if (name.IndexOfAny(['/', '\\', ':']) >= 0) throw new InvalidDataException("InputPluginNameInvalid");
-                    names.Add("<string>" + XmlValueEditor.Escape(name) + "</string>");
+                    names.Add(name);
                 }
-                replacements[node] = string.Concat(names);
+                stringLists[node] = names;
             }
             else
             {
@@ -60,7 +61,7 @@ public abstract class BveSettingsAdapter(IBackupService backups) : IBveSettingsA
         }
         var encoding = DetectXmlEncoding(bytes);
         var text = encoding.GetString(bytes).TrimStart('\uFEFF');
-        var patched = XmlValueEditor.Replace(text, document, replacements, append);
+        var patched = XmlValueEditor.Replace(text, document, replacements, append, stringLists);
         var content = encoding.GetPreamble().Concat(encoding.GetBytes(patched)).ToArray();
         _ = Load(content);
         cancellationToken.ThrowIfCancellationRequested();

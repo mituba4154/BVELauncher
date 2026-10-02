@@ -18,6 +18,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Compile Include="..\..\src\BVELauncher.App\ViewModels\ScenarioCardViewModel.cs" Link="ViewModels\ScenarioCardViewModel.cs" />
+    <Compile Include="..\..\src\BVELauncher.App\ViewModels\CollectionSynchronization.cs" Link="ViewModels\CollectionSynchronization.cs" />
   </ItemGroup>
 
   <ItemGroup>

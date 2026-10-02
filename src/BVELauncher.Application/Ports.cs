@@ -9,6 +9,12 @@ public interface IAssetReader
 }
 public sealed record AssetReadResult(AssetKind Kind, IReadOnlyDictionary<string, string> Metadata,
     IReadOnlyList<AssetReference> References, IReadOnlyList<DiagnosticItem> Diagnostics, string Fingerprint);
+public sealed record CachedAssetRead(string Path, DateTime Stamp, long Size, AssetReadResult? Result);
+public interface IAssetCacheStore
+{
+    Task<IReadOnlyList<CachedAssetRead>> LoadAssetCacheAsync(CancellationToken cancellationToken = default);
+    Task SaveAssetCacheAsync(IEnumerable<CachedAssetRead> entries, CancellationToken cancellationToken = default);
+}
 public interface ILibraryStore
 {
     Task InitializeAsync(CancellationToken cancellationToken = default);

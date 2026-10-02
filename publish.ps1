@@ -8,6 +8,7 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT='1'
 if($LASTEXITCODE -ne 0){throw 'publish failed'}
 foreach($file in @('LICENSE','README.md','THIRD_PARTY_NOTICES.md')){Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination $OutputDirectory}
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'licenses') -Destination $OutputDirectory -Recurse -Force
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'docs') -Destination $OutputDirectory -Recurse -Force
 $zip=Join-Path (Split-Path $OutputDirectory -Parent) 'BVELauncher-win-x64.zip'
 Compress-Archive -Path (Join-Path $OutputDirectory '*') -DestinationPath $zip -Force
 Get-FileHash -LiteralPath $zip -Algorithm SHA256 | Format-List

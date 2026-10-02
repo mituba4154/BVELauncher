@@ -11,7 +11,7 @@ public sealed class ExtensionDetector
         foreach (var runtime in runtimes)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            foreach (var directory in new[] { runtime.InstallDirectory, Path.Combine(runtime.InstallDirectory, "Extensions"), Path.Combine(runtime.InstallDirectory, "BveEX") }.Where(Directory.Exists))
+            foreach (var directory in new[] { runtime.InstallDirectory, Path.Combine(runtime.InstallDirectory, "Input Devices"), Path.Combine(runtime.InstallDirectory, "Extensions"), Path.Combine(runtime.InstallDirectory, "BveEX") }.Where(Directory.Exists))
                 foreach (var file in Directory.EnumerateFiles(directory, "BveEx*.dll", SearchOption.TopDirectoryOnly))
                 {
                     var info = FileVersionInfo.GetVersionInfo(file);
@@ -22,9 +22,9 @@ public sealed class ExtensionDetector
     }, cancellationToken);
     public async Task RunLocalInstallerAsync(string path, CancellationToken cancellationToken = default)
     {
-        if (!Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Installer must be an executable.");
+        if (!Path.GetExtension(path).Equals(".exe", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("InstallerNotExecutable");
         var info = FileVersionInfo.GetVersionInfo(path);
-        if (!(info.ProductName + info.FileDescription).Contains("BveEX", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Installer metadata does not identify BveEX.");
+        if (!(info.ProductName + info.FileDescription).Contains("BveEX", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("InstallerNotRecognized");
         using var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(path)! }) ?? throw new IOException("Installer launch failed.");
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
     }

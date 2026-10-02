@@ -13,21 +13,22 @@ public sealed class ProcessRunner(AppPaths paths, ILocalLog log) : IProcessRunne
     {
         cancellationToken.ThrowIfCancellationRequested();
         string? marker = null;
-        if (plan.GeneratedPath != null)
-        {
-            marker = Path.Combine(paths.Generated, Guid.NewGuid().ToString("N") + ".json");
-            await AtomicFile.WriteAsync(marker, JsonSerializer.SerializeToUtf8Bytes(new GeneratedLease(plan.GeneratedPath, 0, null)), cancellationToken).ConfigureAwait(false);
-        }
         Process? started = null;
         try
         {
+            if (plan.GeneratedPath != null)
+            {
+                marker = Path.Combine(paths.Generated, Guid.NewGuid().ToString("N") + ".json");
+                await AtomicFile.WriteAsync(marker, JsonSerializer.SerializeToUtf8Bytes(new GeneratedLease(plan.GeneratedPath, 0, null)), cancellationToken).ConfigureAwait(false);
+            }
             var process = Process.Start(CreateStartInfo(plan)) ?? throw new IOException("Process creation failed.");
             started = process;
             processes[process.Id] = process;
             if (marker != null)
             {
                 try { await AtomicFile.WriteAsync(marker, JsonSerializer.SerializeToUtf8Bytes(new GeneratedLease(plan.GeneratedPath!, process.Id, process.StartTime.ToUniversalTime())), CancellationToken.None).ConfigureAwait(false); }
-                catch (IOException ex) { log.Write("Warning", "Generated lease update deferred until runtime exits.", ex); }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+                { log.Write("Warning", "Generated lease update deferred until runtime exits.", ex); }
             }
             return new(process.Id, plan, DateTime.UtcNow);
         }

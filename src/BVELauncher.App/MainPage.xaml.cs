@@ -66,10 +66,11 @@ public sealed partial class MainPage:Page
     }
     private async void Folder_Click(object sender,RoutedEventArgs e)
     {
-        await GuardAsync(async()=>{var folder=await new FolderPicker(App.Window.AppWindow.Id).PickSingleFolderAsync();if(folder==null)return;var roots=session.Settings.Roots.ToList();if(!roots.Any(r=>r.Path.Equals(folder.Path,StringComparison.OrdinalIgnoreCase)))roots.Add(new(Guid.NewGuid(),folder.Path));await session.SaveSettingsAsync(session.Settings with{Roots=roots});session.Watch(()=>DispatcherQueue.TryEnqueue(()=>ViewModel.RescanCommand.Execute(null)));ViewModel.RescanCommand.Execute(null);});
+        await GuardAsync(async()=>{var folder=await new FolderPicker(App.Window.AppWindow.Id).PickSingleFolderAsync();if(folder==null)return;var roots=session.Settings.Roots.ToList();if(!roots.Any(r=>r.Path.Equals(folder.Path,StringComparison.OrdinalIgnoreCase)))roots.Add(new(Guid.NewGuid(),folder.Path));await session.SaveSettingsAsync(session.Settings with{Roots=roots});session.Watch(()=>DispatcherQueue.TryEnqueue(()=>ViewModel.RequestRescan()));ViewModel.RequestRescan();});
     }
     private async void Vehicles_Click(object sender,RoutedEventArgs e)=>await GuardAsync(()=>dialogs.VehicleAsync(null));
     private void Settings_Click(object sender,RoutedEventArgs e)=>OpenSettings();
+    public void CloseSecondaryWindows(){dialogs?.CloseScenarioSettings();settingsWindow?.Close();}
     private void OpenSettings(){if(settingsWindow==null){settingsWindow=new(session,l,ViewModel);settingsWindow.Closed+=(_,_)=>{settingsWindow=null;App.Window.ApplyTheme();Localize();ViewModel.RefreshVisible();};}settingsWindow.Activate();}
     private void Scenario_RightTapped(object sender,RightTappedRoutedEventArgs e)
     {

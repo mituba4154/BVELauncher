@@ -238,7 +238,7 @@
     <value>Head motion</value>
   </data>
   <data name="Bve_InputPlugins" xml:space="preserve">
-    <value>Input plugins (separated by |)</value>
+    <value>Input devices</value>
   </data>
   <data name="Bve_KeyAts0" xml:space="preserve">
     <value>ATS 0</value>
@@ -911,4 +911,6 @@
   </data>
   <data name="ScenarioActions" xml:space="preserve"><value>Scenario actions</value></data>
   <data name="ResetAssistantPositions" xml:space="preserve"><value>Restore assistant default positions</value></data>
+  <data name="InstallerNotExecutable" xml:space="preserve"><value>Select an installer executable</value></data>
+  <data name="InstallerNotRecognized" xml:space="preserve"><value>The selected file could not be identified as a BveEX installer</value></data>
 </root>

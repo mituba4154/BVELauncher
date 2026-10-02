@@ -25,13 +25,19 @@ UIはViewModelの状態を表示し、ファイルI/Oをサービスへ渡しま
 `LibraryScanner`は再入をSemaphoreで制御し、バックグラウンドで走査します。
 小さなテキストの先頭ヘッダーで種別を識別し、参照先をキューへ追加します。
 未知バイナリーを全読み込みせず、タイムスタンプ・サイズで解析キャッシュを再利用します。
+解析結果と未知テキストの判定をSQLiteへ保存し、アプリの再起動後も再利用します。
+元ファイルが不変でも、参照先の追加・削除は走査時に再確認します。
 初回は検出したシナリオを8件ずつUIへ通知します。
 画像は同時2件までバックグラウンドで縮小し、縮小PNGをキャッシュします。
 大きすぎる画像・デコード不能な画像はプレースホルダーになります。
 Grid / Listはグループ付きの仮想化コントロールを使います。
+UI通知は120 msでまとめ、項目とグループの差分だけ反映します。
+同一検索結果の再通知ではコレクションを変更せず、既存コンテナーを維持します。
+シナリオ設定は専用ウィンドウに表示し、検索可能な車両リストを有限のGrid領域で仮想化します。
 
 `FileSystemWatcher`は600 ms debounceで再スキャンを要求します。
 overflow時にも同じ再スキャン経路を使います。
+操作中の変更は保留し、完了後に1回の再スキャンへまとめます。
 探索は全rootを列挙し直しますが、変更のないファイルは再解析しません。
 現在のパスが消失し、一意に同じ内容のファイルが見つかった場合のみIDを移動先へ引き継ぎます。
 重複コピーには別IDを付けます。
@@ -42,7 +48,7 @@ overflow時にも同じ再スキャン経路を使います。
 `%LOCALAPPDATA%\BVELauncher`以下にSettings、Library、Cache、Logs、Backups、Staging、Generatedを作成します。
 テスト用`BVELAUNCHER_TEST_DATA`を指定した場合は、その別rootだけを使用します。
 
-SQLite schema 2はEntries、Metadata、LaunchHistory、ScenarioOverrides、Installationsを保持します。
+SQLite schema 3はEntries、Metadata、LaunchHistory、ScenarioOverrides、Installations、AssetCacheを保持します。
 インデックスは元ファイルの代替ではありません。
 favorite / alias / hidden / runtime / vehicleなどのユーザー変更は独立したoverrideとして保存し、同時スキャンで上書きしません。
 migration前にはSQLite backup APIでWALを含めたバックアップを作成します。
@@ -66,6 +72,8 @@ single instanceはWindows App SDK `AppInstance`で制御します。
 
 BVEプロセスの変更、hook、injection、renderer置換はありません。
 BveEXは既知の場所のファイル名・製品情報を読むだけです。
+入力デバイスは`Input Devices`内のDLLメタデータから表示名・versionを取得し、標準の拡張子なし小文字名を保存します。
+登録されているが検出できない名前も保持・解除できるため、未知の設定を走査で消しません。
 ローカルinstallerはユーザーが選択・確定したときだけ起動します。
 第三者input plugin固有の設定UIは呼び出しません。
 ネットワーク接続、テレメトリー、パッケージ検索は製品機能に含めません。

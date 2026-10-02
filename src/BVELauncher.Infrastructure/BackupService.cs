@@ -23,7 +23,7 @@ public sealed class BackupService(AppPaths paths) : IBackupService
     public async Task RestoreAsync(BackupRecord record, CancellationToken cancellationToken = default)
     {
         if (await AtomicFile.HashAsync(record.BackupPath, cancellationToken).ConfigureAwait(false) != record.Hash) throw new InvalidDataException("Backup integrity check failed.");
-        await AtomicFile.WriteAsync(record.OriginalPath, await File.ReadAllBytesAsync(record.BackupPath, cancellationToken).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+        await AtomicFile.CopyAsync(record.BackupPath, record.OriginalPath, cancellationToken, record.Hash).ConfigureAwait(false);
     }
     public async Task<IReadOnlyList<BackupRecord>> ListAsync(CancellationToken cancellationToken = default)
     {

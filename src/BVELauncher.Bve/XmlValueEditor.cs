@@ -6,7 +6,7 @@ namespace BVELauncher.Bve;
 // XMLを検証した上で対象要素の文字区間だけ変更し、未知要素と改行を保持する。
 internal static class XmlValueEditor
 {
-    public static string Replace(string original, XmlDocument document, IReadOnlyDictionary<XmlNode, string> values, IReadOnlySet<XmlNode>? append = null)
+    public static string Replace(string original, XmlDocument document, IReadOnlyDictionary<XmlNode, string> values, IReadOnlySet<XmlNode>? append = null, IReadOnlyDictionary<XmlNode, IReadOnlyList<string>>? stringLists = null)
     {
         var spans = new List<ElementSpan>(); var stack = new Stack<ElementSpan>();
         for (int i = 0; i < original.Length;)
@@ -35,10 +35,32 @@ internal static class XmlValueEditor
         var elements = document.SelectNodes("//*")!.Cast<XmlNode>().ToArray();
         if (elements.Length != spans.Count) throw new InvalidDataException("XmlSpanMismatch");
         var replacements = new List<(int Start, int Length, string Value)>();
+        var locations = elements.Select((node, i) => (node, span: spans[i])).ToDictionary(p => p.node, p => p.span);
         for (int i = 0; i < elements.Length; i++)
         {
-            if (!values.TryGetValue(elements[i], out var value)) continue;
             var span = spans[i];
+            string? value = null;
+            if (stringLists?.TryGetValue(elements[i], out var names) == true)
+            {
+                var children = elements[i].ChildNodes.Cast<XmlNode>().Where(n => n.NodeType == XmlNodeType.Element && n.Name == "string").ToArray();
+                var inner = span.Empty ? "" : original[span.OpenEnd..span.EndStart];
+                var edits = new List<(int Start, int Length, string Value)>();
+                for (int childIndex = 0; childIndex < children.Length; childIndex++)
+                {
+                    var child = children[childIndex]; var childSpan = locations[child];
+                    if (childIndex >= names.Count) edits.Add((childSpan.Start - span.OpenEnd, childSpan.End - childSpan.Start, ""));
+                    else if (childSpan.Empty)
+                    {
+                        var opening = original[childSpan.Start..childSpan.OpenEnd];
+                        edits.Add((childSpan.Start - span.OpenEnd, childSpan.End - childSpan.Start, opening[..opening.LastIndexOf('/')].TrimEnd() + ">" + Escape(names[childIndex]) + "</string>"));
+                    }
+                    else edits.Add((childSpan.OpenEnd - span.OpenEnd, childSpan.EndStart - childSpan.OpenEnd, Escape(names[childIndex])));
+                }
+                foreach (var edit in edits.OrderByDescending(e => e.Start)) inner = inner[..edit.Start] + edit.Value + inner[(edit.Start + edit.Length)..];
+                value = inner + string.Concat(names.Skip(children.Length).Select(name => "<string>" + Escape(name) + "</string>"));
+            }
+            else if (values.TryGetValue(elements[i], out var replacement)) value = replacement;
+            if (value == null) continue;
             if (span.Empty)
             {
                 var opening = original[span.Start..span.OpenEnd];

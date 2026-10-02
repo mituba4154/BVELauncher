@@ -4,7 +4,7 @@ namespace BVELauncher.Infrastructure;
 
 public static class AtomicFile
 {
-    public static async Task CopyAsync(string source, string destination, CancellationToken cancellationToken = default)
+    public static async Task CopyAsync(string source, string destination, CancellationToken cancellationToken = default, string? expectedHash = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(destination))!);
         string temporary = destination + ".BVELauncher-" + Guid.NewGuid().ToString("N") + ".tmp";
@@ -13,6 +13,7 @@ public static class AtomicFile
             await using (var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 65536, true))
             await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None, 65536, FileOptions.Asynchronous | FileOptions.WriteThrough))
             { await input.CopyToAsync(output, cancellationToken).ConfigureAwait(false); await output.FlushAsync(cancellationToken).ConfigureAwait(false); output.Flush(true); }
+            if (expectedHash != null && await HashAsync(temporary, cancellationToken).ConfigureAwait(false) != expectedHash) throw new InvalidDataException("ImportSourceChanged");
             cancellationToken.ThrowIfCancellationRequested();
             if (File.Exists(destination)) File.Replace(temporary, destination, null); else File.Move(temporary, destination);
         }

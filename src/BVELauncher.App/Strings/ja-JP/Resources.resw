@@ -238,7 +238,7 @@
     <value>頭の揺れ</value>
   </data>
   <data name="Bve_InputPlugins" xml:space="preserve">
-    <value>入力プラグイン（|区切り）</value>
+    <value>入力デバイス</value>
   </data>
   <data name="Bve_KeyAts0" xml:space="preserve">
     <value>保安装置 0</value>
@@ -911,4 +911,6 @@
   </data>
   <data name="ScenarioActions" xml:space="preserve"><value>シナリオの操作</value></data>
   <data name="ResetAssistantPositions" xml:space="preserve"><value>補助表示を既定位置に戻す</value></data>
+  <data name="InstallerNotExecutable" xml:space="preserve"><value>インストーラーのexeファイルを選択してください</value></data>
+  <data name="InstallerNotRecognized" xml:space="preserve"><value>BveEXインストーラーと確認できませんでした</value></data>
 </root>

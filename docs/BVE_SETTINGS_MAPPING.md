@@ -36,7 +36,7 @@ BVEがそのPreferencesを使用中の場合は保存を拒否します。
 | HeadMotion | 頭の揺れ | Simulation | `/Preferences/HeadMotion` | Integer | 0 .. 100 | 25 | 対応 / 対応 |
 | Language | BVEの言語 | General | `/Preferences/Language` | Choice | Japanese, English | Japanese | 対応 / 対応 |
 | ScenarioDirectory | シナリオフォルダー | General | `/Preferences/ScenarioForm/Address/string[1]` | Path | — | 空 | 対応 / 対応 |
-| InputPlugins | 入力プラグイン（|区切り） | Input | `/Preferences/InputPlugins` | Text | — | 空 | 対応 / 対応 |
+| InputPlugins | 入力デバイス | Input | `/Preferences/InputPlugins` | Text | — | 空 | 対応 / 対応 |
 | DevelopmentEnabled | 開発用機能 | Advanced | `/Preferences/DevelopmentEnabled` | Boolean | — | false | 対応 / 対応 |
 | Assist_lever | ハンドル位置 表示 | Assistants | `/Preferences/Assistants/AssistantSettings[Name='lever']/Visible` | Boolean | — | true | 対応 / 対応 |
 | AssistAuto_lever | ハンドル位置 自動配置 | Assistants | `/Preferences/Assistants/AssistantSettings[Name='lever']/AutoLocation` | Boolean | — | true | 対応 / 対応 |

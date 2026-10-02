@@ -18,8 +18,13 @@ public partial class ScenarioCardViewModel(ScenarioEntry entry) : ObservableObje
     [ObservableProperty] public partial string? ThumbnailPath { get; set; }
     public void Update(ScenarioEntry entry)
     {
-        Entry = entry; OnPropertyChanged(nameof(Title)); OnPropertyChanged(nameof(VehicleTitle)); OnPropertyChanged(nameof(RouteTitle));
-        OnPropertyChanged(nameof(ImagePath)); OnPropertyChanged(nameof(Warning)); OnPropertyChanged(nameof(Favorite));
+        var old = Entry; Entry = entry;
+        if (old.DisplayTitle != entry.DisplayTitle) OnPropertyChanged(nameof(Title));
+        if (old.VehicleTitle != entry.VehicleTitle) OnPropertyChanged(nameof(VehicleTitle));
+        if (old.RouteTitle != entry.RouteTitle) OnPropertyChanged(nameof(RouteTitle));
+        if (old.ImagePath != entry.ImagePath) OnPropertyChanged(nameof(ImagePath));
+        if (old.Compatibility.HasWarnings != entry.Compatibility.HasWarnings) OnPropertyChanged(nameof(Warning));
+        if (old.Favorite != entry.Favorite) OnPropertyChanged(nameof(Favorite));
     }
 }
 public sealed class ScenarioGroup(string title, IEnumerable<ScenarioCardViewModel> items) : ObservableObject

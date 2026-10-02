@@ -105,7 +105,7 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
                 journal.Files.Add(installed);
                 await SaveJournalAsync().ConfigureAwait(false);
                 Directory.CreateDirectory(Path.GetDirectoryName(operation.DestinationPath)!);
-                await AtomicFile.CopyAsync(operation.StagedPath, operation.DestinationPath, cancellationToken).ConfigureAwait(false);
+                await AtomicFile.CopyAsync(operation.StagedPath, operation.DestinationPath, cancellationToken, operation.NewHash).ConfigureAwait(false);
                 if (await AtomicFile.HashAsync(operation.DestinationPath, cancellationToken).ConfigureAwait(false) != operation.NewHash) throw new IOException("ImportVerificationFailed");
                 progress?.Report(new(journal.Files.Count, plan.Scenarios, operation.RelativePath));
             }
@@ -142,7 +142,7 @@ public sealed class ImportService(AppPaths paths, ArchiveStager stager, IAssetRe
                 if (!Path.GetFullPath(file.BackupPath).StartsWith(Path.TrimEndingDirectorySeparator(Path.GetFullPath(paths.Backups)) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("JournalBackupEscape");
                 PathSafety.EnsureNoLinks(file.BackupPath);
                 if (await AtomicFile.HashAsync(file.BackupPath, cancellationToken).ConfigureAwait(false) != file.OriginalHash) throw new InvalidDataException("BackupIntegrity");
-                await AtomicFile.CopyAsync(file.BackupPath, file.Path, cancellationToken).ConfigureAwait(false);
+                await AtomicFile.CopyAsync(file.BackupPath, file.Path, cancellationToken, file.OriginalHash).ConfigureAwait(false);
             }
             else if (file.Ownership == Ownership.Managed) File.Delete(file.Path);
         }

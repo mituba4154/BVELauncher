@@ -41,6 +41,7 @@ public sealed partial class MainWindow : Window
     private async void OnClosing(AppWindow sender,AppWindowClosingEventArgs args)
     {
         if(closing)return;args.Cancel=true;closing=true;
+        if(RootFrame.Content is MainPage page)page.CloseSecondaryWindows();
         try
         {
             var settings=session.Settings;bool maximized=AppWindow.Presenter is OverlappedPresenter presenter && presenter.State==OverlappedPresenterState.Maximized;

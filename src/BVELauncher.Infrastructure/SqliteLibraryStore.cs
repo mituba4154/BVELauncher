@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 
 namespace BVELauncher.Infrastructure;
 
-public sealed class SqliteLibraryStore(AppPaths paths, ILocalLog log) : ILibraryStore
+public sealed class SqliteLibraryStore(AppPaths paths, ILocalLog log) : ILibraryStore, IAssetCacheStore
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private SqliteConnection Open()
@@ -35,8 +35,8 @@ public sealed class SqliteLibraryStore(AppPaths paths, ILocalLog log) : ILibrary
             using var version = connection.CreateCommand();
             version.CommandText = "PRAGMA user_version;";
             int schema = Convert.ToInt32(version.ExecuteScalar());
-            if (schema > 2) throw new InvalidDataException("Database schema is newer than this application.");
-            if (schema is > 0 and < 2)
+            if (schema > 3) throw new InvalidDataException("Database schema is newer than this application.");
+            if (schema is > 0 and < 3)
             {
                 using var backup = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = paths.Database + ".migration-" + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff"), Pooling = false }.ToString());
                 backup.Open(); connection.BackupDatabase(backup);
@@ -49,11 +49,51 @@ public sealed class SqliteLibraryStore(AppPaths paths, ILocalLog log) : ILibrary
                 CREATE TABLE IF NOT EXISTS Metadata(Key TEXT PRIMARY KEY, Json TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS LaunchHistory(Id INTEGER PRIMARY KEY, ScenarioId TEXT NOT NULL, TimeUtc TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS ScenarioOverrides(Id TEXT PRIMARY KEY, Json TEXT NOT NULL);
-                PRAGMA user_version=2;
+                CREATE TABLE IF NOT EXISTS AssetCache(Path TEXT PRIMARY KEY COLLATE NOCASE, Json TEXT NOT NULL);
+                PRAGMA user_version=3;
                 """;
             command.ExecuteNonQuery();
         }
     }, cancellationToken);
+
+    public async Task<IReadOnlyList<CachedAssetRead>> LoadAssetCacheAsync(CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return await Task.Run<IReadOnlyList<CachedAssetRead>>(() =>
+            {
+                using var connection = Open(); using var command = connection.CreateCommand();
+                command.CommandText = "SELECT Json FROM AssetCache";
+                using var reader = command.ExecuteReader(); var entries = new List<CachedAssetRead>();
+                while (reader.Read()) { cancellationToken.ThrowIfCancellationRequested(); entries.Add(JsonSerializer.Deserialize<CachedAssetRead>(reader.GetString(0))!); }
+                return entries;
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        finally { gate.Release(); }
+    }
+    public async Task SaveAssetCacheAsync(IEnumerable<CachedAssetRead> entries, CancellationToken cancellationToken = default)
+    {
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await Task.Run(() =>
+            {
+                using var connection = Open(); using var transaction = connection.BeginTransaction();
+                using var temp = connection.CreateCommand(); temp.Transaction = transaction;
+                temp.CommandText = "CREATE TEMP TABLE SeenCache(Path TEXT PRIMARY KEY COLLATE NOCASE);"; temp.ExecuteNonQuery();
+                using var command = connection.CreateCommand(); command.Transaction = transaction;
+                command.CommandText = "INSERT INTO AssetCache(Path,Json) VALUES($path,$json) ON CONFLICT(Path) DO UPDATE SET Json=excluded.Json WHERE Json<>excluded.Json; INSERT INTO SeenCache(Path) VALUES($path);";
+                var path = command.Parameters.Add("$path", SqliteType.Text); var json = command.Parameters.Add("$json", SqliteType.Text);
+                foreach (var entry in entries)
+                { cancellationToken.ThrowIfCancellationRequested(); path.Value = entry.Path; json.Value = JsonSerializer.Serialize(entry); command.ExecuteNonQuery(); }
+                using var cleanup = connection.CreateCommand(); cleanup.Transaction = transaction;
+                cleanup.CommandText = "DELETE FROM AssetCache WHERE Path NOT IN (SELECT Path FROM SeenCache);"; cleanup.ExecuteNonQuery();
+                transaction.Commit();
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        finally { gate.Release(); }
+    }
 
     public async Task<LibrarySnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {

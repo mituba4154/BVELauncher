@@ -2,7 +2,7 @@ using BVELauncher.Core;
 
 namespace BVELauncher.Application;
 
-public sealed class LaunchScenario(IAssetReader reader, IProcessRunner runner, ILibraryStore store, IEnumerable<IBveRuntimeAdapter> adapters)
+public sealed class LaunchScenario(IAssetReader reader, IProcessRunner runner, ILibraryStore store, IEnumerable<IBveRuntimeAdapter> adapters, ILocalLog? log = null)
 {
     public async Task<LaunchPlan> PrepareAsync(ScenarioEntry scenario, IEnumerable<BveRuntime> runtimes, AppSettings settings,
         string generatedDirectory, VehicleOverride? vehicle = null, Guid? runtimeOverride = null, CancellationToken cancellationToken = default, bool useDefaultVehicle = true)
@@ -20,7 +20,9 @@ public sealed class LaunchScenario(IAssetReader reader, IProcessRunner runner, I
     public async Task<RunningLaunch> ExecuteAsync(LaunchPlan plan, CancellationToken cancellationToken = default)
     {
         var launch = await runner.StartAsync(plan, cancellationToken).ConfigureAwait(false);
-        await store.RecordLaunchAsync(plan.ScenarioId, launch.StartedUtc, CancellationToken.None).ConfigureAwait(false);
+        // BVE起動後の履歴保存失敗で、起動失敗と誤表示したり終了追跡を失ったりしない。
+        try { await store.RecordLaunchAsync(plan.ScenarioId, launch.StartedUtc, CancellationToken.None).ConfigureAwait(false); }
+        catch (Exception ex) { log?.Write("Warning", "Launch history could not be saved.", ex); }
         return launch;
     }
     public Task WaitAsync(RunningLaunch launch, CancellationToken cancellationToken = default) => runner.WaitForExitAsync(launch.ProcessId, cancellationToken);
