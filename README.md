@@ -1,79 +1,98 @@
 # BVELauncher
 
 BVE Trainsim 5.8 / 6向けの非公式Windowsランチャーです。
-シナリオを選んですぐ運転を始められる、WinUI 3のシナリオ・車両ライブラリを提供します。
-BVE本体、BveEX、路線・車両アドオンは同梱しません。
+シナリオと車両を探し、好きな組み合わせで運転を始められます。
 
-## 日本語
+[英語版の説明はこちら](readme_en_us.md)。この日本語版を原本とします。
 
-### 使い方
+## ダウンロード・起動
 
-1. 配布用`BVELauncher-win-x64.zip`を任意のフォルダーへ展開し、`BVELauncher.App.exe`を起動します。
-2. BVEと標準のシナリオフォルダーを自動検出します。見つからない場合は「設定」でBVE実行ファイルとフォルダーを登録します。
-3. ライブラリのシナリオをクリックすると、そのシナリオを引数にBVEが起動します。
-4. 車両を変更する場合は右クリックから「車両を変更して運転」を選びます。元シナリオは変更されません。
-5. ZIP / 7z / フォルダー / 単独シナリオをドロップするか「インポート」で選び、配置先と競合をプレビューして確定します。
+1. [最新版の配布ページ](https://github.com/mituba4154/BVELauncher/releases/latest)を開きます。
+2. **Assets**から `BVELauncher-win-x64.zip` をダウンロードします。
+3. ZIPをフォルダーに**すべて展開**し、`BVELauncher.App.exe` を起動します。
 
-検索、グループ表示、Grid / List、お気に入り、非表示、最近の起動順、表示名・グループ・既定車両・BVEの個別設定に対応します。
-「設定」から日本語 / English、System / Light / Dark、BVE標準設定、インポート履歴、バックアップ、ログを操作できます。
-`Ctrl+F`で検索、`Ctrl+R`で再スキャン、`Ctrl+,`で設定、`Enter`で選択シナリオを起動します。
+Windows 10 2004以降 / Windows 11のx64に対応します。
+.NETとWindows App SDKランタイムは配布ZIPに含まれます。
+BVE本体・BveEX・路線・車両データは別途用意してください。
 
-### 動作環境とデータ
+## はじめて運転するまで
 
-Windows 10 2004以降 / Windows 11、x64専用です。
-自己完結型配布には.NETとWindows App SDKランタイムを含みます。
-BVE側のDirectXなどの前提条件は[BVE公式配布ページ](https://www.bvets.net/jp/download/)を参照してください。
-ランチャーはBVEバイナリーを変更せず、アドオンDLLをロードしません。
-診断の警告があっても、シナリオとBVE実行ファイルが存在すれば起動できます。
+### 1. BVE本体を用意する
 
-データは`%LOCALAPPDATA%\BVELauncher`に保存します。
-SQLiteは再作成可能な索引で、元のBVEファイルが正本です。表示上の変更はランチャー内に保存します。
-BVE設定は変更箇所だけを保存し、事前バックアップを作成します。
-インポートでは既存・共有・ユーザーが変更したファイルを保護します。
-自動ダウンロード、テレメトリー、オンラインアカウントはありません。
+BVEが見つからないときは、ライブラリに導入案内が表示されます。
+「BVEを入れる」で公式サイトを開き、サイトの案内に沿ってインストールします。
+終わったら「インストール済みのBVEを再確認」を押します。
+すでに導入済みの場合は「すでにBVEを入れた方」から、使っている `BveTs.exe` を選択できます。
+必要な追加ソフトの案内も[BVE公式サイト](https://www.bvets.net/jp/download/)をご覧ください。
 
-### 開発・検証・配布
+### 2. シナリオを表示する
 
-Windows、.NET 10 SDK、Windows SDKを用意して実行します。
-プロジェクトはWindows App SDK **2.5.1 Stable**を固定使用します。
-`global.json`のSDK要件は.NET 10です。
+標準のシナリオフォルダーは自動で見つけます。
+別の場所に置いている場合は、上部のフォルダーボタンからそのフォルダーを追加してください。
+シナリオ数が多いと初回の読み取りに時間がかかります。読み取りが終わった分から表示し、解析結果を次回起動にも引き継ぎます。
 
-```powershell
-./build.ps1 -Configuration Debug
-./build.ps1 -Configuration Release
-./publish.ps1 -SkipBuild
-```
+### 3. 運転する
 
-配布物は`artifacts/BVELauncher-win-x64.zip`、展開済みアプリは`artifacts/publish`です。
-GitHub ActionsもDebug / Release / testsを実行し、配布ZIPとTRXを成果物として保存します。
-署名なしの自己完結ZIPを配布します。MSIXインストールは必要ありません。
+シナリオをクリックするとBVEが起動します。
+検索欄には、路線・車両・作者などの名前を入力できます。
+お気に入りやグループで絞り込めます。一覧表示とカード表示も切り替えられます。
 
-設計・制約・再現手順は[architecture](docs/ARCHITECTURE.md)、[formats](docs/FORMATS.md)、[import](docs/IMPORT.md)、[BVE settings mapping](docs/BVE_SETTINGS_MAPPING.md)、[testing](docs/TESTING.md)を参照してください。
+### 4. 車両を変える
 
-## English
+シナリオの「⋯」から「車両を変更して運転」を選びます。
+車両は名前とファイルの場所で見分けられ、複数の語で検索できます。
+いつも同じ車両で運転する場合は「シナリオ設定」で既定車両を選び、保存します。
+元のシナリオファイルは変更しません。
 
-BVELauncher is an **unofficial** Windows launcher and library manager for BVE Trainsim 5.8 and 6.
-It opens directly into the scenario library. Click a scenario to launch BVE with its full scenario path; use its context menu to change the vehicle without editing the original file.
+### 5. キー・画面・音量を設定する
 
-Extract `BVELauncher-win-x64.zip` and run `BVELauncher.App.exe` on Windows 10 version 2004 or later / Windows 11 x64.
-The distribution is self-contained. BVE and its prerequisites must be installed separately.
-Register additional executables and scenario folders in Settings if automatic detection does not find them.
-Drop ZIP, 7z, a folder or a scenario file into the library, review the destination and conflicts, then import.
-Use Settings to choose Japanese or English, change the theme, edit BVE preferences, inspect import history and restore backups.
+「設定」→「BVE」→「BVEを開いて設定する」を押します。
+BVEでシナリオを開き、運転画面を右クリックして「設定」を選んでください。
+キー割り当てや画面・音量などはBVE本体で変更します。設定は本体が保存し、次回起動にも引き継ぎます。
+ランチャーはBVEの内部設定を編集しません。
+ファイルの場所などを確認したい場合は「詳細を表示」を開けます。
 
-Application data is stored in `%LOCALAPPDATA%\BVELauncher`.
-Original BVE files remain authoritative; aliases, groups, favorites and overrides belong to the launcher.
-BVE preferences are backed up before atomic updates, and unknown XML fields are preserved.
-Managed uninstall protects existing, modified and externally referenced files.
-The launcher never patches BVE, loads unknown plug-in DLLs, downloads add-ons automatically or sends telemetry.
-BVE, BveEX and third-party add-ons are not included.
+## データや拡張機能を追加する
 
-Build on Windows with .NET 10 SDK and Windows SDK using the PowerShell commands above.
-`publish.ps1` generates the unsigned, unpackaged self-contained x64 ZIP.
-See [testing](docs/TESTING.md) for automated and native BVE validation, including limits that have not been verified.
+路線・車両のZIP / 7z / フォルダー / シナリオファイルを、ライブラリにドロップするか「インポート」から選びます。
+配置先と上書き対象を確認してから導入します。配布者の説明に指定の配置先がある場合は、その指示に従ってください。
+導入履歴やバックアップは「設定」から確認できます。
 
-## License / ライセンス
+BveEX拡張機能は「設定」→「BVE」の拡張機能欄から導入します。
 
-Original BVELauncher source is licensed under [MPL-2.0](LICENSE).
-Dependency licenses and required notices are included in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
-BVE Trainsim and BveEX remain the property of their respective authors and are separate products.
+1. 「公式配布ページでダウンロード」を押し、配布元で利用条件を確認してファイルを取得します。
+2. 「ダウンロード済みファイルを導入」を押し、取得したZIP / 7z / DLLを選びます。
+3. 導入先を確認します。BveEXを標準の場所に導入している場合は、変更する必要はありません。
+4. 配置先と上書きの確認画面で「インポート」を押します。
+
+TsHudには **BveEX 2.1.0以降** が必要です。
+ほかの拡張DLLには「その他の拡張DLLを導入」を使えます。ZIP内のDLL名は、配布者の説明に従って入力してください。
+この操作は指定したDLLだけを配置します。追加の依存ファイルが必要な拡張は、配布者の手順に従ってください。
+
+## 警告が出たとき
+
+三角の警告は、参照先ファイルの不足などを示します。
+シナリオの「⋯」から診断を開くと、内容を確認できます。
+警告があってもBVE実行ファイルとシナリオが存在すれば起動できます。
+車両などの別配布データが必要な場合は、シナリオ配布者の案内を確認してください。
+
+## ショートカットと保存先
+
+| 操作 | キー |
+|---|---|
+| 検索 | `Ctrl+F` |
+| 再スキャン | `Ctrl+R` |
+| 設定を開く | `Ctrl+,` |
+| 選択シナリオで運転 | `Enter` |
+
+ランチャーの設定・索引・バックアップは `%LOCALAPPDATA%\BVELauncher` に保存します。
+表示名や既定車両などはランチャー側に保存します。
+インポートで既存ファイルを上書きする前にはバックアップを作成します。
+BVE本体の書き換え、ランチャー内でのプラグインDLL実行、テレメトリー、オンラインアカウントはありません。
+
+## ライセンス
+
+私たちが作成したコード・スクリプト・UI・文書・独自アセットは **[GPL-3.0-or-later](LICENSE)** です。
+GNU GPL第3版または、それ以降の版に従って再配布・改変できます。無保証です。
+範囲は[NOTICE](NOTICE)、第三者のライセンスは[依存関係の通知](THIRD_PARTY_NOTICES.md)をご覧ください。
+各配布版に対応するソースコードとビルドスクリプトは、その配布版のタグから取得できます。

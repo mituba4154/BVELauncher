@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.App.Services;
 using BVELauncher.App.ViewModels;
 using BVELauncher.Application;
@@ -15,7 +17,6 @@ public sealed partial class SettingsWindow : Window
     private readonly LocalizationService l;
     private readonly MainPageViewModel vm;
     private readonly List<Func<AppSettings, AppSettings>> updates = [];
-    private BveSettingsEditor? bveEditor;
     public SettingsWindow(LauncherSession session, LocalizationService localization, MainPageViewModel vm)
     {
         (this.session, l, this.vm) = (session, localization, vm); InitializeComponent();
@@ -30,7 +31,7 @@ public sealed partial class SettingsWindow : Window
         if (args.SelectedItem is not NavigationViewItem item) return;
         await GuardAsync(async () =>
         {
-            updates.Clear(); bveEditor = null; SettingsContent.Children.Clear(); SettingsStatus.Text = ""; SaveButton.Visibility = Visibility.Visible;
+            updates.Clear(); SettingsContent.Children.Clear(); SettingsStatus.Text = ""; SaveButton.Visibility = Visibility.Visible;
             var key = (string)item.Tag;
             SettingsContent.Children.Add(new TextBlock { Text = l[key], Style = (Style)Microsoft.UI.Xaml.Application.Current.Resources["TitleTextBlockStyle"] });
             switch (key)
@@ -64,8 +65,10 @@ public sealed partial class SettingsWindow : Window
                     SettingsContent.Children.Add(Action("ResetSettings", async () => { if (await ConfirmAsync("ResetConfirm")) { await session.SaveSettingsAsync(new AppSettings { Roots = session.Settings.Roots, Runtimes = session.Settings.Runtimes }); SettingsStatus.Text = l["Saved"]; } })); break;
                 case "About":
                     var branding = App.Services.GetRequiredService<Branding>(); SettingsContent.Children.Add(UiFactory.Text(branding.DisplayName + " " + branding.Version));
-                    SettingsContent.Children.Add(UiFactory.Text("MPL-2.0")); SettingsContent.Children.Add(UiFactory.Text(l["Unofficial"]));
+                    SettingsContent.Children.Add(UiFactory.Text("Copyright (C) 2026 BVELauncher contributors · GPL-3.0-or-later"));
+                    SettingsContent.Children.Add(UiFactory.Text(l["GplNotice"])); SettingsContent.Children.Add(UiFactory.Text(l["Unofficial"]));
                     SettingsContent.Children.Add(new HyperlinkButton { Content = "GitHub", NavigateUri = new Uri("https://github.com/mituba4154/BVELauncher") });
+                    SettingsContent.Children.Add(Action("LicenseText", () => { ExplorerInterop.OpenTextFile(Path.Combine(AppContext.BaseDirectory, "LICENSE")); return Task.CompletedTask; }));
                     SettingsContent.Children.Add(Action("Notices", () => { ExplorerInterop.OpenTextFile(Path.Combine(AppContext.BaseDirectory, "THIRD_PARTY_NOTICES.md")); return Task.CompletedTask; })); SaveButton.Visibility = Visibility.Collapsed; break;
             }
         });
@@ -76,9 +79,13 @@ public sealed partial class SettingsWindow : Window
         SettingsContent.Children.Add(UiFactory.Row(l[key], combo)); updates.Add(s => combo.SelectedIndex < 0 ? s : update(s, combo.SelectedIndex));
     }
     private Button Action(string key, Func<Task> action) => UiFactory.Button(l[key], "Setting" + key, () => GuardAsync(action));
+    public void SelectBvePage() => SettingsNavigation.SelectedItem = SettingsNavigation.MenuItems.Cast<NavigationViewItem>().Single(item => (string)item.Tag == "Bve");
     private async Task BuildRuntimesAsync()
     {
         var runtimes = session.Settings.Runtimes;
+        SettingsContent.Children.Add(UiFactory.Text(l["NativeSettingsHint"]));
+        SettingsContent.Children.Add(UiFactory.Identify(new HyperlinkButton { Content = l["InstallBve"], NavigateUri = new("https://www.bvets.net/jp/download/") }, "BveOfficialDownload", l["InstallBve"]));
+        SettingsContent.Children.Add(Action("DetectBve", async () => { await session.RefreshRuntimesAsync(); await vm.RescanCommand.ExecuteAsync(null); await BuildBvePageAsync(); }));
         Pick("DefaultRuntime", runtimes.Select(r => r.Kind + " " + r.Version).ToArray(), Math.Max(0, runtimes.FindIndex(r => r.Id == session.Settings.DefaultRuntimeId)), (s, i) => s with { DefaultRuntimeId = runtimes[i].Id });
         SettingsContent.Children.Add(Action("AddRuntime", async () =>
         {
@@ -86,34 +93,38 @@ public sealed partial class SettingsWindow : Window
             var runtime = await Task.Run(() => App.Services.GetRequiredService<IRuntimeDetector>().Inspect(file.Path));
             if (!runtime.IsValid) throw new InvalidDataException("RuntimeMissing");
             var updated = runtimes.Where(r => !r.ExecutablePath.Equals(runtime.ExecutablePath, StringComparison.OrdinalIgnoreCase)).Append(runtime).ToList();
-            await session.SaveSettingsAsync(session.Settings with { Runtimes = updated }); SettingsStatus.Text = l["Saved"];
+            await session.SaveSettingsAsync(session.Settings with { Runtimes = updated }); await BuildBvePageAsync(); SettingsStatus.Text = l["Saved"];
         }));
         foreach (var runtime in runtimes)
         {
-            var panel = UiFactory.Form(); panel.Children.Add(UiFactory.Text(runtime.Kind + " " + runtime.Version)); panel.Children.Add(UiFactory.Text(runtime.ExecutablePath));
-            panel.Children.Add(UiFactory.Button(l["BveSettings"], "BveSettings" + runtime.Kind, () => GuardAsync(async () =>
+            var panel = UiFactory.Form(); panel.Children.Add(UiFactory.Text(runtime.Kind + " " + runtime.Version));
+            panel.Children.Add(UiFactory.Button(l["OpenNativeBveSettings"], "OpenBve" + runtime.Kind, () => GuardAsync(() =>
             {
-                var preference = runtime.PreferencesPath;
-                if (!File.Exists(preference))
-                {
-                    SettingsStatus.Text = l["SettingsUnavailable"];
-                    var picker = new FileOpenPicker(AppWindow.Id); picker.FileTypeFilter.Add(".xml"); var file = await picker.PickSingleFileAsync(); if (file == null) return;
-                    preference = file.Path; await session.SaveSettingsAsync(session.Settings with { Runtimes = session.Settings.Runtimes.Select(r => r.Id == runtime.Id ? r with { PreferencesPath = preference } : r).ToList() });
-                }
-                bveEditor = new(session, l, runtime with { PreferencesPath = preference });
-                SettingsContent.Children.Clear(); SettingsContent.Children.Add(bveEditor); await bveEditor.LoadAsync();
+                if (!App.Services.GetRequiredService<IRuntimeDetector>().Inspect(runtime.ExecutablePath).IsValid) throw new InvalidDataException("RuntimeMissing");
+                var info = new System.Diagnostics.ProcessStartInfo(runtime.ExecutablePath) { WorkingDirectory = runtime.InstallDirectory, UseShellExecute = false };
+                System.Diagnostics.Process.Start(info)?.Dispose(); SettingsStatus.Text = l["NativeSettingsHint"]; return Task.CompletedTask;
             })));
-            panel.Children.Add(UiFactory.Button(l["OpenBveSettings"], "OpenBve" + runtime.Kind, () => { var info = new System.Diagnostics.ProcessStartInfo(runtime.ExecutablePath) { WorkingDirectory = runtime.InstallDirectory, UseShellExecute = false }; System.Diagnostics.Process.Start(info)?.Dispose(); return Task.CompletedTask; }));
-            SettingsContent.Children.Add(new Expander { Header = runtime.Kind + " " + runtime.Version, Content = panel, IsExpanded = true, HorizontalAlignment = HorizontalAlignment.Stretch });
+            var details = UiFactory.Form(); details.Children.Add(UiFactory.Text(runtime.ExecutablePath)); details.Children.Add(UiFactory.Text(runtime.PreferencesPath ?? ""));
+            panel.Children.Add(new Expander { Header = l["ShowDetails"], Content = details, HorizontalAlignment = HorizontalAlignment.Stretch });
+            SettingsContent.Children.Add(panel);
         }
         var statuses = await session.Extensions.DetectAsync(runtimes); SettingsContent.Children.Add(UiFactory.Text(l["Extensions"]));
-        foreach (var extension in statuses) SettingsContent.Children.Add(UiFactory.Text(extension.Name + " " + extension.Version + Environment.NewLine + extension.Path));
+        foreach (var extension in statuses)
+        {
+            SettingsContent.Children.Add(UiFactory.Text(extension.Name + " " + extension.Version));
+            SettingsContent.Children.Add(new Expander { Header = l["ShowDetails"], Content = UiFactory.Text(extension.Path), HorizontalAlignment = HorizontalAlignment.Stretch });
+        }
         if (statuses.Count == 0) SettingsContent.Children.Add(UiFactory.Text(l["NoExtension"]));
+        SettingsContent.Children.Add(new Expander { Header = l["ExtensionCatalog"], Content = ExtensionCatalog.Build(session, l, this), IsExpanded = true, HorizontalAlignment = HorizontalAlignment.Stretch });
         SettingsContent.Children.Add(Action("LocalInstaller", async () =>
         {
             var picker = new FileOpenPicker(AppWindow.Id); picker.FileTypeFilter.Add(".exe"); var file = await picker.PickSingleFileAsync(); if (file == null || !await ConfirmAsync("InstallerConfirm")) return;
             await session.Extensions.RunLocalInstallerAsync(file.Path); SettingsStatus.Text = string.Join(Environment.NewLine, (await session.Extensions.DetectAsync(runtimes)).Select(s => s.Name + " " + s.Version));
         }));
+    }
+    private async Task BuildBvePageAsync()
+    {
+        updates.Clear(); SettingsContent.Children.Clear(); await BuildRuntimesAsync(); vm.RefreshVisible();
     }
     private void BuildRoots()
     {
@@ -131,12 +142,8 @@ public sealed partial class SettingsWindow : Window
     }
     private async void Save_Click(object sender, RoutedEventArgs e) => await GuardAsync(async () =>
     {
-        if (bveEditor != null) await bveEditor.SaveAsync();
-        else
-        {
-            var settings = updates.Aggregate(session.Settings, (current, update) => update(current)); await session.SaveSettingsAsync(settings);
-            if (settings.Language.Length > 0) l.SetLanguage(settings.Language); vm.GridView = settings.GridView; App.Window.ApplyTheme();
-        }
+        var settings = updates.Aggregate(session.Settings, (current, update) => update(current)); await session.SaveSettingsAsync(settings);
+        if (settings.Language.Length > 0) l.SetLanguage(settings.Language); vm.GridView = settings.GridView; App.Window.ApplyTheme();
         SettingsStatus.Text = l["Saved"];
     });
     private async Task ShowInstallationsAsync()

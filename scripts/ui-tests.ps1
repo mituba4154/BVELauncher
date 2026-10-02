@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 BVELauncher contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 param([Parameter(Mandatory)][int]$AppPid,[string]$DataDirectory,[string]$OutputDirectory=(Join-Path $PSScriptRoot '../ui-test-results'))
 $ErrorActionPreference='Stop'
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null
@@ -46,10 +48,6 @@ function Select-Choice([string]$Id,[string]$Name,[long]$Window) {
     if(-not $choice){throw "Choice '$Name' missing"}
     Invoke-Ui $choice.selector $Window
 }
-function Open-Bve6([long]$Window) {
-    Invoke-Ui 'SettingsBve' $Window;Invoke-Ui 'BveSettingsBve6' $Window
-    Wait-Ui 'BveWindowWidth' '' $Window
-}
 Test-Step 'Startup shows scenario library' {Wait-Ui 'ScenarioGrid';Wait-Ui 'StatusText' '1 シナリオ'}
 if($DataDirectory){
     Test-Step 'Second process redirects to the existing single instance' {
@@ -60,7 +58,10 @@ if($DataDirectory){
             $second=Start-Process -FilePath $exe -WindowStyle Hidden -PassThru
             if(-not $second.WaitForExit(5000)){throw 'Second instance did not exit'}
             if(@(winapp ui list-windows -a $AppPid --json|ConvertFrom-Json|Where-Object title -eq BVELauncher).Count -ne 1){throw 'Main window count changed'}
-        } finally {$env:BVELAUNCHER_TEST_DATA=$savedData}
+        } finally {
+            $env:BVELAUNCHER_TEST_DATA=$savedData
+            if($second -and -not $second.HasExited){$second.CloseMainWindow()|Out-Null;$second.WaitForExit(5000)|Out-Null}
+        }
     }
 }
 Test-Step 'Search filters Japanese scenario' {
@@ -97,27 +98,17 @@ Test-Step 'Settings window opens and persists view preference' {
     if($DataDirectory -and -not(Test-Path (Join-Path $DataDirectory 'Settings/appsettings.json'))){throw 'Settings file missing'}
 }
 if($DataDirectory){
-    Test-Step 'BVE6 numeric edit persists without losing focus and keeps backup' {
-        $window=Settings-Window;Open-Bve6 $window
-        $path=Join-Path $DataDirectory 'BveTs6.Preferences.xml';[xml]$before=Get-Content $path
-        Run-Ui @('set-value','BveWindowWidth','912','-w',[string]$window)|Out-Null
-        Invoke-Ui 'SaveSettings' $window;Wait-Ui 'SettingsStatus' '保存しました' $window
-        [xml]$saved=Get-Content $path;if($saved.Preferences.WindowSize.Width -ne '912'){throw 'Pending numeric edit was lost'}
-        if(-not @(Get-ChildItem (Join-Path $DataDirectory 'Backups') -Recurse -Filter '*.json')){throw 'Backup missing'}
-        Run-Ui @('set-value','BveWindowWidth',[string]$before.Preferences.WindowSize.Width,'-w',[string]$window)|Out-Null
+    Test-Step 'BVE settings delegate to native BVE without writing preferences' {
+        $settings=Get-Content (Join-Path $DataDirectory 'Settings/appsettings.json') -Raw|ConvertFrom-Json
+        $hashes=@{};foreach($runtime in $settings.Runtimes){if(Test-Path -LiteralPath $runtime.PreferencesPath){$hashes[$runtime.PreferencesPath]=(Get-FileHash -LiteralPath $runtime.PreferencesPath).Hash}}
+        $window=Settings-Window;Invoke-Ui 'SettingsBve' $window
+        Wait-Ui 'OpenBveBve6' '' $window
+        $tree=Run-Ui @('inspect','-w',[string]$window,'--json','--depth','18')|ConvertFrom-Json
+        $elements=@(Get-Elements $tree.windows[0].elements)
+        if($elements|Where-Object {$_.automationId -in @('BveCategory','BveWindowWidth','BveKeyboardPreset')}){throw 'Internal BVE editor is still exposed'}
+        Wait-Ui 'InstallTsHud' '' $window;Wait-Ui 'InstallOtherExtension' '' $window
         Invoke-Ui 'SaveSettings' $window;Invoke-Ui 'Close' $window
-    }
-    Test-Step 'BVE simulation setting survives category navigation and reload' {
-        $window=Settings-Window;Open-Bve6 $window
-        $path=Join-Path $DataDirectory 'BveTs6.Preferences.xml';[xml]$before=Get-Content $path
-        Select-Choice 'BveCategory' 'シミュレーション' $window
-        Run-Ui @('set-value','BveHeadMotion','42','-w',[string]$window)|Out-Null
-        Select-Choice 'BveCategory' 'グラフィック' $window
-        Invoke-Ui 'SaveSettings' $window;Wait-Ui 'SettingsStatus' '保存しました' $window
-        [xml]$saved=Get-Content $path;if($saved.Preferences.HeadMotion -ne '42'){throw 'Category navigation lost edit'}
-        Select-Choice 'BveCategory' 'シミュレーション' $window
-        Run-Ui @('set-value','BveHeadMotion',[string]$before.Preferences.HeadMotion,'-w',[string]$window)|Out-Null
-        Invoke-Ui 'SaveSettings' $window;Invoke-Ui 'Close' $window
+        foreach($path in $hashes.Keys){if((Get-FileHash -LiteralPath $path).Hash -ne $hashes[$path]){throw 'BVE preferences were changed by launcher settings'}}
     }
     Test-Step 'Language switches to English and back' {
         $window=Settings-Window;Select-Choice 'SettingLanguage' 'English' $window;Invoke-Ui 'SaveSettings' $window
@@ -126,28 +117,6 @@ if($DataDirectory){
         if($settings.Language -ne 'en-US'){throw 'English preference not saved'}
         $window=Settings-Window;Select-Choice 'SettingLanguage' '日本語' $window;Invoke-Ui 'SaveSettings' $window
         Wait-Ui 'SettingsStatus' '保存しました' $window;Invoke-Ui 'Close' $window
-    }
-    Test-Step 'Visible assistant default position reset persists' {
-        $window=Settings-Window;Open-Bve6 $window
-        Select-Choice 'BveCategory' '補助表示' $window
-        Invoke-Ui 'BveAssistAuto_clock' $window
-        Invoke-Ui 'BveResetAssistantPositions' $window
-        Invoke-Ui 'SaveSettings' $window;Wait-Ui 'SettingsStatus' '保存しました' $window
-        [xml]$saved=Get-Content (Join-Path $DataDirectory 'BveTs6.Preferences.xml')
-        $clock=@($saved.Preferences.Assistants.AssistantSettings|Where-Object {$_.Name -eq 'clock'})[0]
-        if($clock.AutoLocation -ne 'true'){throw 'Default position reset was not saved'}
-        Invoke-Ui 'Close' $window
-    }
-    Test-Step 'Native input device checkbox saves lowercase extensionless key' {
-        $window=Settings-Window;Open-Bve6 $window
-        Select-Choice 'BveCategory' '入力デバイス' $window
-        $path=Join-Path $DataDirectory 'BveTs6.Preferences.xml';[xml]$before=Get-Content $path
-        $key='mackoy.tsmcinterface';$wasEnabled=@($before.Preferences.InputPlugins.string) -contains $key
-        Invoke-Ui ('BveInputDevice'+$key) $window;Invoke-Ui 'SaveSettings' $window
-        Wait-Ui 'SettingsStatus' '保存しました' $window
-        [xml]$saved=Get-Content $path
-        if((@($saved.Preferences.InputPlugins.string) -contains $key) -eq $wasEnabled){throw 'Input device checkbox change not saved'}
-        Invoke-Ui ('BveInputDevice'+$key) $window;Invoke-Ui 'SaveSettings' $window;Invoke-Ui 'Close' $window
     }
     Test-Step 'Dark theme saves and restores System' {
         $window=Settings-Window;Invoke-Ui 'SettingsAppearance' $window;Select-Choice 'SettingTheme' 'ダーク' $window;Invoke-Ui 'SaveSettings' $window

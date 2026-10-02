@@ -8,3 +8,4 @@ TestResults/
 *.pfx
 .vs/
 ui-test-results/
+docs/

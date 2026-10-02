@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 BVELauncher contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 param([Parameter(Mandatory)][int]$AppPid,[Parameter(Mandatory)][string]$ImportZip,[Parameter(Mandatory)][string]$ExpectedScenarioPath,[int]$LibraryCountBefore=1)
 $ErrorActionPreference='Stop'
 if(Test-Path -LiteralPath $ExpectedScenarioPath){throw 'Use a new self-authored test scenario; destination already exists'}

@@ -10,7 +10,9 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
-            <!-- Other app resources here -->
+            <DataTemplate x:Key="VehicleTemplate">
+                <local:VehicleRow />
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

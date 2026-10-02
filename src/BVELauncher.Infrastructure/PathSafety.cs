@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 namespace BVELauncher.Infrastructure;
 
 public static class PathSafety

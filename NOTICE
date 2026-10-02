@@ -1,0 +1,22 @@
+BVELauncher
+Copyright (C) 2026 BVELauncher contributors
+
+SPDX-License-Identifier: GPL-3.0-or-later
+
+All original BVELauncher code, build and test scripts, configuration, UI,
+documentation and original assets in this repository are licensed under the
+GNU General Public License, version 3 or (at your option) any later version.
+This scope includes original files that cannot contain a license header.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License in LICENSE.
+You may redistribute and modify this program under those terms.
+
+Third-party software, license texts and notices retain their original terms.
+See THIRD_PARTY_NOTICES.md and licenses/. BVE Trainsim, BveEX and third-party
+add-ons are separate products and are not included in this repository.
+
+Corresponding BVELauncher source, including build scripts, is available at:
+https://github.com/mituba4154/BVELauncher
+Each release is associated with a tag identifying its corresponding source.

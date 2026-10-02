@@ -913,4 +913,28 @@
   <data name="ResetAssistantPositions" xml:space="preserve"><value>Restore assistant default positions</value></data>
   <data name="InstallerNotExecutable" xml:space="preserve"><value>Select an installer executable</value></data>
   <data name="InstallerNotRecognized" xml:space="preserve"><value>The selected file could not be identified as a BveEX installer</value></data>
+  <data name="ExtensionCatalog" xml:space="preserve"><value>Get and install extensions</value></data>
+  <data name="ExtensionCatalogHint" xml:space="preserve"><value>Download from the official page, then select the downloaded ZIP or DLL to install. Extension binaries are not bundled.</value></data>
+  <data name="TsHudDescription" xml:space="preserve"><value>Displays next station, speed limit and stopping information, with stop-by-stop and overall driving scores.</value></data>
+  <data name="TsHudDependency" xml:space="preserve"><value>Requires a working BVE and BveEX 2.1.0 or later. Install BveEX first.</value></data>
+  <data name="OfficialDownload" xml:space="preserve"><value>Download from the official page</value></data>
+  <data name="InstallDownloadedExtension" xml:space="preserve"><value>Install a downloaded file</value></data>
+  <data name="ExtensionTrustHint" xml:space="preserve"><value>Check the author's terms and only install files you trust. BveEX will execute the DLL when BVE next starts. The default location is Public Documents\BveEx\2.0\Extensions.</value></data>
+  <data name="ExtensionInstalled" xml:space="preserve"><value>Installed. Open a scenario in BVE with BveEX installed.</value></data>
+  <data name="ExtensionPackageMissing" xml:space="preserve"><value>Could not identify exactly one requested DLL in the package</value></data>
+  <data name="ExtensionPackageInvalid" xml:space="preserve"><value>The selected file could not be confirmed as a valid DLL</value></data>
+  <data name="GplNotice" xml:space="preserve"><value>You may redistribute and modify this program under GNU GPL version 3 or any later version. This program comes with no warranty. Read LICENSE in the application folder.</value></data>
+  <data name="LicenseText" xml:space="preserve"><value>License text</value></data>
+  <data name="ExtensionDllName" xml:space="preserve"><value>DLL file name specified by the publisher</value></data>
+  <data name="InstallOtherExtension" xml:space="preserve"><value>Install another extension DLL</value></data>
+  <data name="BveSetupHint" xml:space="preserve"><value>BVE is required to start driving. Select Install BVE to open the official site and follow its installation instructions. Then check again.</value></data>
+  <data name="DetectBve" xml:space="preserve"><value>Check again for installed BVE</value></data>
+  <data name="ShowDetails" xml:space="preserve"><value>Show details</value></data>
+  <data name="NativeSettingsHint" xml:space="preserve"><value>Configure keys, graphics and sound in BVE itself. Open BVE, load a scenario, then right-click the driving screen and choose Settings. BVE saves your settings for the next session.</value></data>
+  <data name="OpenNativeBveSettings" xml:space="preserve"><value>Open BVE to configure settings</value></data>
+  <data name="BveNotInstalled" xml:space="preserve"><value>BVE was not found</value></data>
+  <data name="InstallBve" xml:space="preserve"><value>Install BVE</value></data>
+  <data name="RegisterExistingBve" xml:space="preserve"><value>I have already installed BVE</value></data>
+  <data name="ExtensionSingleDllHint" xml:space="preserve"><value>Only the specified DLL is installed. Follow the publisher instructions for extensions that need additional dependency files.</value></data>
+  <data name="ExtensionDefaultDestination" xml:space="preserve"><value>The default BveEX extension folder is selected. Continue with this location unless you installed BveEX elsewhere; choose Show details to change the destination.</value></data>
 </root>

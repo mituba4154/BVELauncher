@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.Application;
 using BVELauncher.Bve;
 using BVELauncher.Infrastructure;
@@ -35,7 +37,7 @@ public partial class App : Microsoft.UI.Xaml.Application
     {
         try
         {
-            instance=AppInstance.FindOrRegisterForKey("BVELauncher"+(Environment.GetEnvironmentVariable("BVELAUNCHER_TEST_DATA")??""));
+            instance=AppInstance.FindOrRegisterForKey("BVELauncher:"+Services.GetRequiredService<AppPaths>().Root.ToUpperInvariant());
             if(!instance.IsCurrent){await instance.RedirectActivationToAsync(AppInstance.GetCurrent().GetActivatedEventArgs());Exit();return;}
             Window=new MainWindow();
             instance.Activated+=(_,activation)=>Window.DispatcherQueue.TryEnqueue(()=>{Window.AppWindow.Show();Window.Activate();});

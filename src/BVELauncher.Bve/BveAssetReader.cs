@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using System.Security.Cryptography;
 using System.Text;
 using BVELauncher.Application;
@@ -44,16 +46,22 @@ public sealed class BveAssetReader : IAssetReader
         else if (kind is AssetKind.Performance or AssetKind.StructureList or AssetKind.SoundList or AssetKind.VehicleSound or AssetKind.Panel or AssetKind.MotorNoise or AssetKind.Train)
         {
             var text = document.Encoding.GetString(bytes).TrimStart('\uFEFF');
-            if (kind is AssetKind.Panel or AssetKind.Performance or AssetKind.Train)
+            if (kind is AssetKind.Panel or AssetKind.Performance or AssetKind.Train or AssetKind.VehicleSound or AssetKind.MotorNoise)
             {
+                string section = "";
                 foreach (var line in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
                 {
-                    var pair = line.Split('#', ';')[0].Split('=', 2);
+                    var content = line.Split('#', ';')[0].Trim();
+                    if (content.StartsWith('[') && content.EndsWith(']')) { section = content[1..^1].Trim(); continue; }
+                    var pair = content.Split('=', 2);
                     if (pair.Length != 2 || pair[1].Trim().Length == 0) continue;
                     string key = pair[0].Trim();
                     if (kind == AssetKind.Panel && (key.Equals("DaytimeImage", StringComparison.OrdinalIgnoreCase) || key.Equals("NighttimeImage", StringComparison.OrdinalIgnoreCase))) Add(key, pair[1].Trim(), AssetKind.Image);
                     else if (kind == AssetKind.Performance && new[] { "Force", "MaxForce", "Current", "MaxCurrent", "NoLoadCurrent", "Params" }.Contains(key, StringComparer.OrdinalIgnoreCase)) Add(key, pair[1].Trim(), AssetKind.Performance);
                     else if (kind == AssetKind.Train && new[] { "Structure", "Sound", "Model" }.Contains(key, StringComparer.OrdinalIgnoreCase)) Add(key, pair[1].Trim(), AssetKind.Unknown);
+                    else if (kind == AssetKind.VehicleSound && SoundSections.Contains(section)) Add(section + "." + key, pair[1].Trim(), AssetKind.Audio);
+                    // Motor Noise Tableは数値CSV。定義INIにあるVolume/Frequencyだけが参照先となる。
+                    else if (kind == AssetKind.MotorNoise && (section.Equals("Power", StringComparison.OrdinalIgnoreCase) || section.Equals("Brake", StringComparison.OrdinalIgnoreCase)) && (key.Equals("Volume", StringComparison.OrdinalIgnoreCase) || key.Equals("Frequency", StringComparison.OrdinalIgnoreCase))) Add(section + "." + key, pair[1].Trim(), AssetKind.MotorNoise);
                 }
             }
             else
@@ -78,6 +86,10 @@ public sealed class BveAssetReader : IAssetReader
             { diagnostics.Add(new(Severity.Warning, "InvalidPath", path, raw, Detail: ex.Message)); }
         }
     }
+    private static readonly HashSet<string> SoundSections = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Run", "Flange", "Motor", "Joint", "Brake", "Compressor", "AirSpring", "Breaker", "Horn", "Door", "Ats", "Buzzer", "PilotLamp", "BrakeHandle", "MasterController", "Reverser", "Others"
+    };
 
     public async Task<string> MaterializeAsync(string scenarioPath, VehicleOverride vehicle, string fallbackDirectory, CancellationToken cancellationToken)
     {

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 BVELauncher contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 param([Parameter(Mandatory)][string]$SnapshotDirectory,[string]$OutputPath=(Join-Path $PSScriptRoot '../docs/BVE_SETTINGS_MAPPING.md'))
 $ErrorActionPreference='Stop'
 $snapshots=@('Bve5','Bve6')|ForEach-Object {Get-Content (Join-Path $SnapshotDirectory "$_.json") -Raw|ConvertFrom-Json}

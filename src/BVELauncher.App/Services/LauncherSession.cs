@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.Application;
 using BVELauncher.Bve;
 using BVELauncher.Core;
@@ -52,6 +54,14 @@ public sealed class LauncherSession(AppPaths paths, ILibraryStore store, ISettin
             LibraryChanged?.Invoke();
         }
         finally { scanGate.Release(); }
+    }
+    public async Task RefreshRuntimesAsync(CancellationToken cancellationToken = default)
+    {
+        var runtimes = await detector.DetectAsync(Settings.Runtimes, cancellationToken);
+        var roots = Settings.Roots.ToList();
+        if (roots.Count == 0) roots.AddRange(RuntimeDetector.DiscoverScenarioRoots(runtimes).Distinct(StringComparer.OrdinalIgnoreCase).Select(p => new ScenarioRoot(Guid.NewGuid(), p)));
+        await SaveSettingsAsync(Settings with { Runtimes = runtimes.ToList(), Roots = roots }, cancellationToken);
+        LibraryChanged?.Invoke();
     }
     public void Watch(Action changed) { watchCallback = changed; watcher.Watch(Settings.Roots.Select(r => r.Path), changed); }
     public void StopWatching() => watcher.Dispose();

@@ -1,7 +1,9 @@
 # Third-party notices / 第三者ライセンス
 
-BVELauncherのソースはMPL-2.0です。以下は別ライセンスの依存関係です。
-BVELauncher source is licensed under MPL-2.0. Dependencies retain their own licenses.
+BVELauncherの独自コード・スクリプト・UI・独自アセットはGPL-3.0-or-laterです。
+BVELauncher original code, scripts, UI and original assets are licensed under GPL-3.0-or-later.
+第三者の依存関係とその通知は、以下の元のライセンス条件を保持します。
+Third-party dependencies and their notices retain the original license terms below.
 
 BVE Trainsim、BveEX、アドオン、ATS DLLは同梱しません。
 BVE Trainsim, BveEX, add-ons and ATS DLLs are not bundled.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 namespace BVELauncher.Core;
 
 public enum RuntimeKind { Unknown, Bve5, Bve6 }
@@ -14,8 +16,8 @@ public sealed record BveRuntime(Guid Id, RuntimeKind Kind, string Version, strin
     CpuArchitecture Architecture, string InstallDirectory, bool IsValid, string? PreferencesPath = null);
 public sealed record ScenarioRoot(Guid Id, string Path);
 public sealed record AssetFile(Guid Id, string Path, AssetKind Kind, long Size, DateTime LastWriteUtc, string? Fingerprint = null);
-public sealed record AssetReference(string SourcePath, string Key, string RawPath, string ResolvedPath, AssetKind TargetKind, bool Exists);
-public sealed record DiagnosticItem(Severity Severity, string Code, string SourcePath, string Reference = "", string ResolvedPath = "", string Detail = "");
+public sealed record AssetReference(string SourcePath, string Key, string RawPath, string ResolvedPath, AssetKind TargetKind, bool Exists, string? MapBaseDirectory = null);
+public sealed record DiagnosticItem(Severity Severity, string Code, string SourcePath, string Reference = "", string ResolvedPath = "", string Detail = "", string? MapBaseDirectory = null);
 public sealed record CompatibilityReport(IReadOnlyList<DiagnosticItem> Items, RuntimeKind RecommendedRuntime = RuntimeKind.Unknown)
 {
     public bool HasWarnings => Items.Any(i => i.Severity is Severity.Warning or Severity.Error);
@@ -40,7 +42,23 @@ public sealed record VehicleEntry(Guid Id, string Path, string Name, IReadOnlyLi
     IReadOnlyList<AssetReference> References, DateTime LastWriteUtc, string Fingerprint)
 {
     public string? Alias { get; init; }
-    public string DisplayName => ScenarioTitles.FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? Alias ?? Name;
+    public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : ScenarioTitles.FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? FolderName;
+    public string SourceLabel => System.IO.Path.GetFileName(Path) + " · " + System.IO.Path.GetDirectoryName(Path);
+    private string FolderName
+    {
+        get
+        {
+            var folder = System.IO.Path.GetDirectoryName(Path);
+            while (!string.IsNullOrWhiteSpace(folder))
+            {
+                var name = System.IO.Path.GetFileName(folder);
+                if (!new[] { "vehicle", "vehicles", "train", "trains", "data", "車両", "車両データ" }.Contains(name, StringComparer.OrdinalIgnoreCase))
+                    return name + " / " + System.IO.Path.GetFileNameWithoutExtension(Path);
+                folder = System.IO.Path.GetDirectoryName(folder);
+            }
+            return Name;
+        }
+    }
     public string? Ats32 => References.FirstOrDefault(r => r.Key.Equals("Ats32", StringComparison.OrdinalIgnoreCase))?.ResolvedPath;
     public string? Ats64 => References.FirstOrDefault(r => r.Key.Equals("Ats64", StringComparison.OrdinalIgnoreCase))?.ResolvedPath;
 }

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 BVELauncher contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Drawing
 $assets=Join-Path $PSScriptRoot '../src/BVELauncher.App/Assets'

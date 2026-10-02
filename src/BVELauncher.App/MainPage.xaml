@@ -38,7 +38,16 @@
       <AppBarButton x:Name="ListButton" Icon="List" Click="List_Click" AutomationProperties.AutomationId="ListButton"/>
       <AppBarButton x:Name="SettingsButton" Icon="Setting" Click="Settings_Click" AutomationProperties.AutomationId="SettingsButton"/>
     </CommandBar>
-    <Grid Grid.Row="1" Margin="16,0" ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox x:Name="FilterBox" Width="180" SelectionChanged="Filter_Changed" AutomationProperties.AutomationId="FilterBox"/><ComboBox x:Name="SortBox" Grid.Column="1" Width="180" SelectionChanged="Sort_Changed" AutomationProperties.AutomationId="SortBox"/><Button x:Name="DriveButton" Grid.Column="2" Command="{x:Bind ViewModel.DriveCommand}" AutomationProperties.AutomationId="DriveButton"/></Grid>
+    <StackPanel Grid.Row="1" Spacing="8">
+      <InfoBar x:Name="BveSetupNotice" IsOpen="{x:Bind ViewModel.NeedsBve,Mode=OneWay}" IsClosable="False" Severity="Informational" Margin="16,0" AutomationProperties.AutomationId="BveSetupNotice">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <HyperlinkButton x:Name="InstallBveLink" NavigateUri="https://www.bvets.net/jp/download/" AutomationProperties.AutomationId="InstallBveLink"/>
+          <Button x:Name="DetectBveButton" Command="{x:Bind ViewModel.DetectBveCommand}" AutomationProperties.AutomationId="DetectBveButton"/>
+          <Button x:Name="ExistingBveButton" Click="ExistingBve_Click" AutomationProperties.AutomationId="ExistingBveButton"/>
+        </StackPanel>
+      </InfoBar>
+    <Grid Margin="16,0" ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><ComboBox x:Name="FilterBox" Width="180" SelectionChanged="Filter_Changed" AutomationProperties.AutomationId="FilterBox"/><ComboBox x:Name="SortBox" Grid.Column="1" Width="180" SelectionChanged="Sort_Changed" AutomationProperties.AutomationId="SortBox"/><Button x:Name="DriveButton" Grid.Column="2" Command="{x:Bind ViewModel.DriveCommand}" AutomationProperties.AutomationId="DriveButton"/></Grid>
+    </StackPanel>
     <Grid Grid.Row="2" Margin="8,0">
       <GridView x:Name="ScenarioGrid" ItemsSource="{x:Bind GroupedScenarios.View,Mode=OneWay}" ItemTemplate="{StaticResource CardTemplate}" IsItemClickEnabled="True" ItemClick="Scenario_Click" SelectionMode="Single" SelectionChanged="Selection_Changed" RightTapped="Scenario_RightTapped" KeyDown="Scenarios_KeyDown" DoubleTapped="Scenarios_DoubleTapped" AutomationProperties.AutomationId="ScenarioGrid" Visibility="{x:Bind local:MainPage.Visible(ViewModel.GridView),Mode=OneWay}">
         <GridView.GroupStyle><GroupStyle HeaderTemplate="{StaticResource GroupTemplate}" HidesIfEmpty="False" /></GridView.GroupStyle>

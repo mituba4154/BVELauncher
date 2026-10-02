@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.App.Services;
 using BVELauncher.App.ViewModels;
 using BVELauncher.Core;
@@ -6,6 +8,8 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Windowing;
+using BVELauncher.Application;
+using System.Globalization;
 
 namespace BVELauncher.App;
 
@@ -44,13 +48,14 @@ public sealed class ScenarioSettingsWindow : Window
             candidates.Add(new(Guid.NewGuid(), savedPath, Path.GetFileNameWithoutExtension(savedPath), [], [], DateTime.MinValue, ""));
         var vehicles = new[] { new VehicleEntry(Guid.Empty, "", l["StandardVehicle"], [], [], DateTime.MinValue, "") }.Concat(candidates.OrderBy(v => v.DisplayName, StringComparer.CurrentCultureIgnoreCase)).ToArray();
         // 候補リストをPopup内の自動サイズ測定から切り離し、Gridの有限viewportで仮想化する。
-        var vehicle = UiFactory.Identify(new ListView { ItemsSource = vehicles, DisplayMemberPath = "DisplayName", SelectionMode = ListViewSelectionMode.Single }, "ScenarioVehicle", l["DefaultVehicle"]);
-        VehicleEntry chosen = vehicles.FirstOrDefault(v => v.Path.Equals(card.Entry.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase)) ?? vehicles[0];
+        var options = vehicles.ToDictionary(v => v.Id, v => new VehicleOption(v));
+        var vehicle = UiFactory.Identify(new ListView { ItemsSource = vehicles.Select(v => options[v.Id]).ToArray(), ItemTemplate = (DataTemplate)Microsoft.UI.Xaml.Application.Current.Resources["VehicleTemplate"], SelectionMode = ListViewSelectionMode.Single }, "ScenarioVehicle", l["DefaultVehicle"]);
+        VehicleOption chosen = options[(vehicles.FirstOrDefault(v => v.Path.Equals(card.Entry.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase)) ?? vehicles[0]).Id];
         vehicle.SelectedItem = chosen;
-        vehicle.SelectionChanged += (_, _) => { if (vehicle.SelectedItem is VehicleEntry selected) chosen = selected; };
+        vehicle.SelectionChanged += (_, _) => { if (vehicle.SelectedItem is VehicleOption selected) chosen = selected; };
         search.TextChanged += (_, _) =>
         {
-            vehicle.ItemsSource = vehicles.Where(v => v.Id == Guid.Empty || v.DisplayName.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase) || v.Path.Contains(search.Text, StringComparison.OrdinalIgnoreCase)).ToArray();
+            vehicle.ItemsSource = vehicles.Where(v => v.Id == Guid.Empty).Concat(VehicleQuery.Apply(vehicles.Where(v => v.Id != Guid.Empty), search.Text, CultureInfo.GetCultureInfo(l.Language))).Select(v => options[v.Id]).ToArray();
             vehicle.SelectedItem = chosen;
         };
         Add(vehicle, 4);
@@ -62,7 +67,7 @@ public sealed class ScenarioSettingsWindow : Window
             try
             {
                 await session.UpdateScenarioAsync(card.Entry with { Alias = string.IsNullOrWhiteSpace(alias.Text) ? null : alias.Text, CustomGroup = string.IsNullOrWhiteSpace(group.Text) ? null : group.Text,
-                    RuntimeId = runtime.SelectedIndex <= 0 ? null : runtimes[runtime.SelectedIndex - 1].Id, DefaultVehiclePath = chosen.Id == Guid.Empty ? null : chosen.Path });
+                    RuntimeId = runtime.SelectedIndex <= 0 ? null : runtimes[runtime.SelectedIndex - 1].Id, DefaultVehiclePath = chosen.Entry.Id == Guid.Empty ? null : chosen.Entry.Path });
                 Close();
             }
             catch (Exception ex) { await session.ReportErrorAsync("Scenario settings", ex); status.Text = l.Format("OperationFailed", ex.Message); }

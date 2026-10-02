@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.Core;
 
 namespace BVELauncher.Application;
@@ -9,7 +11,7 @@ public interface IAssetReader
 }
 public sealed record AssetReadResult(AssetKind Kind, IReadOnlyDictionary<string, string> Metadata,
     IReadOnlyList<AssetReference> References, IReadOnlyList<DiagnosticItem> Diagnostics, string Fingerprint);
-public sealed record CachedAssetRead(string Path, DateTime Stamp, long Size, AssetReadResult? Result);
+public sealed record CachedAssetRead(string Path, DateTime Stamp, long Size, AssetReadResult? Result, int ParserVersion = 0);
 public interface IAssetCacheStore
 {
     Task<IReadOnlyList<CachedAssetRead>> LoadAssetCacheAsync(CancellationToken cancellationToken = default);

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using System.Collections.ObjectModel;
 using System.Globalization;
 using BVELauncher.Application;
@@ -32,6 +34,7 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty] public partial SortOrder Sort { get; set; }
     [ObservableProperty] public partial bool IsBusy { get; set; }
     [ObservableProperty] public partial bool IsEmpty { get; set; } = true;
+    [ObservableProperty] public partial bool NeedsBve { get; set; }
     [ObservableProperty] public partial bool GridView { get; set; } = true;
     [ObservableProperty] public partial string Status { get; set; } = "";
     [ObservableProperty] public partial ScenarioCardViewModel? Selected { get; set; }
@@ -46,6 +49,7 @@ public partial class MainPageViewModel : ObservableObject
         await RunOperationAsync(async token =>
         {
             await session.InitializeAsync(token);
+            UpdateBveAvailability();
             if (session.Settings.Language.Length > 0) localization.SetLanguage(session.Settings.Language);
             GridView = session.Settings.GridView; Sort = session.Settings.Sort;
             session.Watch(() => context.Post(_ => RequestRescan(), null));
@@ -54,6 +58,12 @@ public partial class MainPageViewModel : ObservableObject
         });
     }
     [RelayCommand] private async Task RescanAsync() => await RunOperationAsync(token => session.ScanAsync(new Progress<ScanProgress>(OnScanProgress), token));
+    [RelayCommand] private async Task DetectBveAsync() => await RunOperationAsync(async token =>
+    {
+        await session.RefreshRuntimesAsync(token); UpdateBveAvailability();
+        await session.ScanAsync(new Progress<ScanProgress>(OnScanProgress), token);
+    });
+    public void UpdateBveAvailability() => NeedsBve = !session.Settings.Runtimes.Any(r => r.IsValid && File.Exists(r.ExecutablePath));
     public void RequestRescan()
     {
         if (IsBusy) { rescanPending = true; return; }
@@ -123,6 +133,7 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnSortChanged(SortOrder value) => RefreshVisible();
     public void RefreshVisible()
     {
+        UpdateBveAvailability();
         var selectedId = Selected?.Id;
         var visible = LibraryQuery.Apply(session.Library.Scenarios, SearchText, Filter, Sort, CultureInfo.GetCultureInfo(localization.Language));
         var imageFiles = session.Library.Assets.Where(a => a.Kind == AssetKind.Image).ToDictionary(a => a.Path, StringComparer.OrdinalIgnoreCase);

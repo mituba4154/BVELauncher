@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.App.Services;
 using BVELauncher.App.ViewModels;
 using BVELauncher.Application;
@@ -46,6 +48,7 @@ public sealed partial class MainPage:Page
         {button.Label=l[key];ToolTipService.SetToolTip(button,l[key]);AutomationProperties.SetName(button,l[key]);}
         SearchBox.PlaceholderText=l["Search"];AutomationProperties.SetName(SearchBox,l["Search"]);
         EmptyText.Text=l["Empty"];EmptyFolderButton.Content=l["AddFolder"];EmptyImportButton.Content=l["Import"];DriveButton.Content=l["Launch"];CancelButton.Content=l["Cancel"];DropText.Text=l["DropHint"];
+        BveSetupNotice.Title=l["BveNotInstalled"]; BveSetupNotice.Message=l["BveSetupHint"]; InstallBveLink.Content=l["InstallBve"]; DetectBveButton.Content=l["DetectBve"]; ExistingBveButton.Content=l["RegisterExistingBve"];
         FilterBox.Items.Clear();foreach(var key in new[]{"All","Bve6","Bve5","Favorites","Warnings"})FilterBox.Items.Add(l[key]);FilterBox.SelectedIndex=(int)ViewModel.Filter;
         SortBox.Items.Clear();foreach(var key in new[]{"Name","Route","Vehicle","Recent","Modified"})SortBox.Items.Add(l[key]);SortBox.SelectedIndex=(int)ViewModel.Sort;
         AutomationProperties.SetName(FilterBox,l["All"]);AutomationProperties.SetName(SortBox,l["Sort"]);localized=true;
@@ -71,7 +74,8 @@ public sealed partial class MainPage:Page
     private async void Vehicles_Click(object sender,RoutedEventArgs e)=>await GuardAsync(()=>dialogs.VehicleAsync(null));
     private void Settings_Click(object sender,RoutedEventArgs e)=>OpenSettings();
     public void CloseSecondaryWindows(){dialogs?.CloseScenarioSettings();settingsWindow?.Close();}
-    private void OpenSettings(){if(settingsWindow==null){settingsWindow=new(session,l,ViewModel);settingsWindow.Closed+=(_,_)=>{settingsWindow=null;App.Window.ApplyTheme();Localize();ViewModel.RefreshVisible();};}settingsWindow.Activate();}
+    private void ExistingBve_Click(object sender,RoutedEventArgs e)=>OpenSettings(true);
+    private void OpenSettings(bool showBve=false){if(settingsWindow==null){settingsWindow=new(session,l,ViewModel);settingsWindow.Closed+=(_,_)=>{settingsWindow=null;App.Window.ApplyTheme();Localize();ViewModel.RefreshVisible();};}settingsWindow.Activate();if(showBve)settingsWindow.SelectBvePage();}
     private void Scenario_RightTapped(object sender,RightTappedRoutedEventArgs e)
     {
         var element=e.OriginalSource as FrameworkElement;

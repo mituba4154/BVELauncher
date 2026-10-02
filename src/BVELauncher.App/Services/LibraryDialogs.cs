@@ -1,6 +1,10 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.App.ViewModels;
 using BVELauncher.Core;
 using BVELauncher.Infrastructure;
+using BVELauncher.Application;
+using System.Globalization;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -30,28 +34,34 @@ public sealed class LibraryDialogs(LauncherSession session, LocalizationService 
         var panel = new Grid { RowSpacing = 12, MinWidth = 460, MaxHeight = 580 };
         panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new() { Height = new(280) }); panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
         var search = UiFactory.Identify(new TextBox { Header = l["Search"] }, "VehicleSearch", l["Search"]);
-        var list = UiFactory.Identify(new ListView { SelectionMode = ListViewSelectionMode.Single, DisplayMemberPath = "DisplayName" }, "VehicleList", l["Vehicles"]);
+        var list = UiFactory.Identify(new ListView { SelectionMode = ListViewSelectionMode.Single, ItemTemplate = (DataTemplate)Microsoft.UI.Xaml.Application.Current.Resources["VehicleTemplate"] }, "VehicleList", l["Vehicles"]);
         var details = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true, MaxHeight = 200 };
         UiFactory.Identify(details, "VehicleDetails", l["References"]);
         var vehicles = session.Library.Vehicles;
         var candidates = new List<VehicleEntry>();
         if (card != null) candidates.Add(new(Guid.Empty, "", l["StandardVehicle"], [], [], DateTime.MinValue, ""));
         candidates.AddRange(vehicles.OrderBy(v => v.DisplayName, StringComparer.CurrentCultureIgnoreCase));
-        list.ItemsSource = candidates; list.SelectedIndex = candidates.Count > 0 ? 0 : -1;
-        search.TextChanged += (_, _) => list.ItemsSource = candidates.Where(v => v.DisplayName.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase) || v.Path.Contains(search.Text, StringComparison.OrdinalIgnoreCase)).ToArray();
+        var options = candidates.ToDictionary(v => v.Id, v => new VehicleOption(v));
+        list.ItemsSource = candidates.Select(v => options[v.Id]).ToArray(); list.SelectedIndex = candidates.Count > 0 ? 0 : -1;
+        search.TextChanged += (_, _) => list.ItemsSource = VehicleQuery.Apply(candidates, search.Text, CultureInfo.GetCultureInfo(l.Language)).Select(v => options[v.Id]).ToArray();
         list.SelectionChanged += (_, _) =>
         {
-            if (list.SelectedItem is not VehicleEntry selected) return;
+            if (list.SelectedItem is not VehicleOption option) return;
+            var selected = option.Entry;
             var usage = session.Library.Scenarios.Where(s => s.References.Any(r => r.ResolvedPath.Equals(selected.Path, StringComparison.OrdinalIgnoreCase))).Select(s => s.DisplayTitle);
             details.Text = selected.Path + Environment.NewLine + "ATS32: " + (selected.Ats32 ?? "") + Environment.NewLine + "ATS64: " + (selected.Ats64 ?? "") + Environment.NewLine +
                 l["UsedBy"] + ": " + string.Join(", ", usage) + Environment.NewLine + string.Join(Environment.NewLine, selected.References.Select(r => (r.Exists ? "✓ " : "⚠ ") + r.Key + ": " + r.RawPath));
         };
-        panel.Children.Add(search); Grid.SetRow(list, 1); panel.Children.Add(list); Grid.SetRow(details, 2); panel.Children.Add(details);
+        var detailsExpander = UiFactory.Identify(new Expander { Header = l["ShowDetails"], Content = details, HorizontalAlignment = HorizontalAlignment.Stretch }, "VehicleDetailsExpander", l["ShowDetails"]);
+        panel.Children.Add(search); Grid.SetRow(list, 1); panel.Children.Add(list); Grid.SetRow(detailsExpander, 2); panel.Children.Add(detailsExpander);
         var dialog = UiFactory.Dialog(root, l["Vehicles"], l["Close"], panel);
         if (card != null) dialog.PrimaryButtonText = l["DriveThisVehicle"];
         var result = await dialog.ShowQueuedAsync();
-        if (card != null && result == ContentDialogResult.Primary && list.SelectedItem is VehicleEntry chosen)
+        if (card != null && result == ContentDialogResult.Primary && list.SelectedItem is VehicleOption selectedOption)
+        {
+            var chosen = selectedOption.Entry;
             await vm.DriveWithVehicleAsync(card, chosen.Id == Guid.Empty ? null : new(chosen.Path, chosen.DisplayName));
+        }
     }
     public async Task DiagnosticsAsync(ScenarioCardViewModel card)
     {

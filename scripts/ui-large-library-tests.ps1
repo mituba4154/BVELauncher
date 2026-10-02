@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 BVELauncher contributors
+# SPDX-License-Identifier: GPL-3.0-or-later
 param([Parameter(Mandatory)][int]$AppPid,[int]$ExpectedScenarios=83,[string]$TestSearch='自動テスト',[string]$OutputDirectory=(Join-Path $PSScriptRoot '../ui-test-results'))
 $ErrorActionPreference='Stop'
 New-Item -ItemType Directory -Force $OutputDirectory|Out-Null

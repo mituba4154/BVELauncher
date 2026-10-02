@@ -1,9 +1,13 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 using BVELauncher.Core;
 
 namespace BVELauncher.Application;
 
 public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILocalLog log)
 {
+    // 解析規則の変更時は旧診断を再利用せず、一度だけ再解析する。
+    public const int ParserVersion = 1;
     private readonly Dictionary<string, CachedAssetRead> cache = new(StringComparer.OrdinalIgnoreCase);
     private bool cacheLoaded;
     private readonly SemaphoreSlim gate = new(1, 1);
@@ -23,8 +27,10 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
         var parsed = new Dictionary<string, AssetReadResult>(StringComparer.OrdinalIgnoreCase);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var assetPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var identities = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var mapContexts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var existence = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
-        var queued = new Queue<(string Path, AssetKind Hint)>();
+        var queued = new Queue<(string Path, AssetKind Hint, string? MapBase)>();
         var usedIds = new HashSet<Guid>();
         var priorPaths = previous.Assets.ToDictionary(a => a.Path, StringComparer.OrdinalIgnoreCase);
         var discovered = new List<ScenarioEntry>();
@@ -34,14 +40,15 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
             cancellationToken.ThrowIfCancellationRequested();
             if (!Directory.Exists(root.Path)) { diagnostics.Add(new(Severity.Warning, "RootMissing", root.Path)); continue; }
             foreach (var file in Directory.EnumerateFiles(root.Path, "*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System }))
-                if (!Path.GetFileName(file).StartsWith(".BVELauncher-", StringComparison.OrdinalIgnoreCase)) queued.Enqueue((Path.GetFullPath(file), AssetKind.Unknown));
+                if (!Path.GetFileName(file).StartsWith(".BVELauncher-", StringComparison.OrdinalIgnoreCase)) queued.Enqueue((Path.GetFullPath(file), AssetKind.Unknown, null));
         }
         while (queued.TryDequeue(out var candidate))
         {
             string file = candidate.Path;
             cancellationToken.ThrowIfCancellationRequested();
             bool firstVisit = seen.Add(file);
-            if (!Exists(file) || !firstVisit && (candidate.Hint == AssetKind.Unknown || parsed.ContainsKey(file) || assetPaths.Contains(file))) continue;
+            bool contextVisit = candidate.MapBase != null && mapContexts.Add(file + "\0" + candidate.MapBase);
+            if (!Exists(file) || !firstVisit && !contextVisit && (candidate.Hint == AssetKind.Unknown || parsed.ContainsKey(file) || assetPaths.Contains(file))) continue;
             bool scenarioHeader = false;
             try
             {
@@ -51,7 +58,7 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
                 AssetReadResult? data = null;
                 if (binaryKind == AssetKind.Unknown && info.Length <= 16 * 1024 * 1024)
                 {
-                    if (cache.TryGetValue(file, out var cached) && cached.Stamp == info.LastWriteTimeUtc && cached.Size == info.Length && !((cached.Result == null || cached.Result.Kind == AssetKind.Unknown) && candidate.Hint != AssetKind.Unknown))
+                    if (cache.TryGetValue(file, out var cached) && cached.ParserVersion == ParserVersion && cached.Stamp == info.LastWriteTimeUtc && cached.Size == info.Length && !((cached.Result == null || cached.Result.Kind == AssetKind.Unknown) && candidate.Hint != AssetKind.Unknown))
                     { data = cached.Result; cacheHits++; }
                     else
                     {
@@ -67,22 +74,39 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
                             parsedFiles++;
                         }
                         // 未知テキストも記録し、再起動時の先頭読み込みを避ける。
-                        cache[file] = new(file, info.LastWriteTimeUtc, info.Length, data);
+                        cache[file] = new(file, info.LastWriteTimeUtc, info.Length, data, ParserVersion);
                     }
                 }
                 // 参照先の追加・削除は、元テキストが不変でも診断に反映する。
                 if (data != null) data = data with { References = data.References.Select(r => r with { Exists = Exists(r.ResolvedPath) }).ToArray() };
                 var kind = data?.Kind ?? binaryKind;
                 if (kind == AssetKind.Unknown) continue;
-                var identity = prior?.Id ?? FindMovedId(data?.Fingerprint, file) ?? Guid.NewGuid();
-                if (!usedIds.Add(identity)) { identity = Guid.NewGuid(); usedIds.Add(identity); }
-                assets.Add(new(identity, file, kind, info.Length, info.LastWriteTimeUtc, data?.Fingerprint));
-                assetPaths.Add(file);
+                bool newAsset = assetPaths.Add(file);
+                var identity = identities.GetValueOrDefault(file);
+                if (newAsset)
+                {
+                    identity = prior?.Id ?? FindMovedId(data?.Fingerprint, file) ?? Guid.NewGuid();
+                    if (!usedIds.Add(identity)) { identity = Guid.NewGuid(); usedIds.Add(identity); }
+                    identities[file] = identity;
+                    assets.Add(new(identity, file, kind, info.Length, info.LastWriteTimeUtc, data?.Fingerprint));
+                }
                 if (data != null)
                 {
-                    parsed[file] = data; diagnostics.AddRange(data.Diagnostics);
-                    references.AddRange(data.References);
-                    foreach (var reference in data.References.Where(r => r.Exists)) queued.Enqueue((reference.ResolvedPath, reference.TargetKind));
+                    parsed[file] = data;
+                    if (newAsset) diagnostics.AddRange(data.Diagnostics);
+                    IReadOnlyList<AssetReference> resolved = data.References;
+                    if (kind == AssetKind.Map)
+                    {
+                        // includeは主マップに挿入されるため、挿入元の場所ではなく主マップの基準を継承する。
+                        resolved = candidate.MapBase == null ? [] : data.References.Select(r =>
+                        {
+                            var target = Path.GetFullPath(Path.Combine(candidate.MapBase, r.RawPath));
+                            return r with { ResolvedPath = target, Exists = Exists(target), MapBaseDirectory = candidate.MapBase };
+                        }).ToArray();
+                    }
+                    references.AddRange(resolved);
+                    foreach (var reference in resolved.Where(r => r.Exists))
+                        queued.Enqueue((reference.ResolvedPath, reference.TargetKind, reference.TargetKind == AssetKind.Map ? candidate.MapBase ?? Path.GetDirectoryName(reference.ResolvedPath) : null));
                     if (kind == AssetKind.Scenario)
                     {
                         scenarioCount++;
@@ -110,7 +134,9 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
             }
         }
         if (discovered.Count > 0) progress?.Report(new(seen.Count, scenarioCount, "", discovered.ToArray()));
-        foreach (var reference in references.Where(r => !r.Exists)) diagnostics.Add(new(Severity.Warning, "ReferenceMissing", reference.SourcePath, reference.RawPath, reference.ResolvedPath));
+        references = references.Distinct().ToList();
+        foreach (var reference in references.Where(r => !r.Exists)) diagnostics.Add(new(Severity.Warning, "ReferenceMissing", reference.SourcePath, reference.RawPath, reference.ResolvedPath, MapBaseDirectory: reference.MapBaseDirectory));
+        diagnostics = diagnostics.Distinct().ToList();
         var scenarios = new List<ScenarioEntry>(); var vehicles = new List<VehicleEntry>();
         foreach (var asset in assets)
         {
@@ -156,11 +182,13 @@ public sealed class LibraryScanner(IAssetReader reader, ILibraryStore store, ILo
     { ".dll" => AssetKind.Dll, ".png" or ".jpg" or ".jpeg" or ".bmp" => AssetKind.Image, ".wav" => AssetKind.Audio, ".x" => AssetKind.Model, _ => AssetKind.Unknown };
     public static IReadOnlyList<DiagnosticItem> ReachableDiagnostics(string path, IReadOnlyList<AssetReference> references, IReadOnlyList<DiagnosticItem> diagnostics)
     {
+        var mapBases = references.Where(r => r.SourcePath.Equals(path, StringComparison.OrdinalIgnoreCase) && r.TargetKind == AssetKind.Map && r.Key.Equals("Route", StringComparison.OrdinalIgnoreCase))
+            .Select(r => Path.GetDirectoryName(r.ResolvedPath)!).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var reachable = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { path };
         var pending = new Queue<string>(); pending.Enqueue(path);
-        var lookup = references.ToLookup(r => r.SourcePath, StringComparer.OrdinalIgnoreCase);
+        var lookup = references.Where(r => r.MapBaseDirectory == null || mapBases.Contains(r.MapBaseDirectory)).ToLookup(r => r.SourcePath, StringComparer.OrdinalIgnoreCase);
         while (pending.TryDequeue(out var current))
             foreach (var reference in lookup[current]) if (reachable.Add(reference.ResolvedPath)) pending.Enqueue(reference.ResolvedPath);
-        return diagnostics.Where(d => reachable.Contains(d.SourcePath)).ToArray();
+        return diagnostics.Where(d => reachable.Contains(d.SourcePath) && (d.MapBaseDirectory == null || mapBases.Contains(d.MapBaseDirectory))).ToArray();
     }
 }

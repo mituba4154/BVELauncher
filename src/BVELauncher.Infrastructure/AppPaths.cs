@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 BVELauncher contributors
+// SPDX-License-Identifier: GPL-3.0-or-later
 namespace BVELauncher.Infrastructure;
 
 public sealed class AppPaths
@@ -11,7 +13,7 @@ public sealed class AppPaths
     public string Backups => Path.Combine(Root, "Backups");
     public string Staging => Path.Combine(Root, "Staging");
     public string Logs => Path.Combine(Root, "Logs");
-    public AppPaths(string? root = null) => Root = root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BVELauncher");
+    public AppPaths(string? root = null) => Root = Path.GetFullPath(root ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BVELauncher"));
     public void EnsureDirectories()
     {
         foreach (var directory in new[] { Data, Path.GetDirectoryName(Settings)!, Cache, Generated, Backups, Staging, Logs }) Directory.CreateDirectory(directory);

@@ -1,7 +1,8 @@
-name: Windows build and tests
+name: Windows build and release
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -9,6 +10,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -20,12 +23,28 @@ jobs:
       - name: Release build, tests and publish
         shell: pwsh
         run: ./publish.ps1
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $zip = 'artifacts/BVELauncher-win-x64.zip'
+          gh release view $env:RELEASE_TAG 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:RELEASE_TAG $zip --clobber
+          } else {
+            $notes = "Windows x64向け。AssetsのBVELauncher-win-x64.zipをすべて展開し、BVELauncher.App.exeを起動してください。使い方はREADMEをご覧ください。`n`n対応するソースコード・ビルドスクリプトは、このReleaseのタグにあるSource codeから取得できます。独自コードはGPL-3.0-or-laterです。"
+            $notes | Set-Content release-notes.txt -Encoding utf8
+            gh release create $env:RELEASE_TAG $zip --verify-tag --title "BVELauncher $env:RELEASE_TAG" --notes-file release-notes.txt
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub Release publishing failed' }
       - uses: actions/upload-artifact@v4
+        if: failure()
         with:
-          name: BVELauncher-win-x64
-          path: artifacts/BVELauncher-win-x64.zip
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results
+          name: failed-test-results
           path: TestResults/**/*.trx
+          retention-days: 1
+          if-no-files-found: ignore
