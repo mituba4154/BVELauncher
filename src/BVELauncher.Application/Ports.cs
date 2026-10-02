@@ -4,7 +4,7 @@ namespace BVELauncher.Application;
 
 public interface IAssetReader
 {
-    Task<AssetReadResult> ReadAsync(string path, CancellationToken cancellationToken);
+    Task<AssetReadResult> ReadAsync(string path, CancellationToken cancellationToken, AssetKind expectedKind = AssetKind.Unknown);
     Task<string> MaterializeAsync(string scenarioPath, VehicleOverride vehicle, string fallbackDirectory, CancellationToken cancellationToken);
 }
 public sealed record AssetReadResult(AssetKind Kind, IReadOnlyDictionary<string, string> Metadata,

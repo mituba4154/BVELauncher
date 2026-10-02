@@ -1,0 +1,72 @@
+using System.Globalization;
+using BVELauncher.Application;
+using BVELauncher.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml.Controls;
+using Windows.System;
+
+namespace BVELauncher.App.Services;
+
+public sealed class BveSettingsEditor(LauncherSession session, LocalizationService l, BveRuntime runtime) : StackPanel
+{
+    private BveSettingsSnapshot? snapshot;
+    private IBveSettingsAdapter? adapter;
+    private readonly Dictionary<string, Func<string>> values = [];
+    private readonly Dictionary<string, string> pending = [];
+    private string category = "Graphics";
+    public async Task LoadAsync()
+    {
+        adapter = App.Services.GetServices<IBveSettingsAdapter>().Single(a => a.Kind == runtime.Kind);
+        snapshot = await adapter.ReadAsync(runtime.PreferencesPath!);
+        Build();
+    }
+    private void Build()
+    {
+        if (snapshot == null) return;
+        foreach (var pair in values) pending[pair.Key] = pair.Value(); values.Clear(); Children.Clear(); Spacing = 16;
+        Children.Add(UiFactory.Text(runtime.Kind + " · " + l["BveSettings"]));
+        var categories = snapshot.Definitions.Select(d => d.Category).Distinct().ToArray();
+        var picker = UiFactory.Combo(categories.Select(c => l[c]).ToArray(), Math.Max(0, Array.IndexOf(categories, category)), "BveCategory", l["BveSettings"]);
+        picker.SelectionChanged += (_, _) => { if (picker.SelectedIndex >= 0) { category = categories[picker.SelectedIndex]; Build(); } }; Children.Add(picker);
+        foreach (var definition in snapshot.Definitions.Where(d => d.Category == category))
+        {
+            var label = l[definition.ResourceKey]; var current = pending.GetValueOrDefault(definition.Property) ?? snapshot.Values[definition.Property];
+            Microsoft.UI.Xaml.FrameworkElement control;
+            if (definition.Type == SettingType.Boolean)
+            {
+                var toggle = UiFactory.Identify(new ToggleSwitch { IsOn = current == "true" }, "Bve" + definition.Property, label); values[definition.Property] = () => toggle.IsOn ? "true" : "false"; control = toggle;
+            }
+            else if (definition.Choices != null)
+            {
+                var choices = definition.Choices.ToList(); if (!choices.Contains(current)) choices.Insert(0, current);
+                var combo = UiFactory.Combo(choices.ToArray(), choices.IndexOf(current), "Bve" + definition.Property, label); values[definition.Property] = () => choices[combo.SelectedIndex]; control = combo;
+            }
+            else if (definition.Type is SettingType.Integer or SettingType.Key)
+            {
+                var number = UiFactory.Identify(new NumberBox { Value = double.Parse(current, CultureInfo.InvariantCulture), Minimum = definition.Minimum ?? int.MinValue, Maximum = definition.Maximum ?? int.MaxValue, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact }, "Bve" + definition.Property, label);
+                NumberBoxAutomation.Attach(number, "Bve" + definition.Property, label);
+                values[definition.Property] = () => ((int)number.Value).ToString(CultureInfo.InvariantCulture); control = number;
+                if (definition.Type == SettingType.Key)
+                {
+                    var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 }; number.Width = 140; panel.Children.Add(number);
+                    var keyButton = UiFactory.Identify(new Button { Content = l["SetKey"] }, "Capture" + definition.Property, l["SetKey"]);
+                    keyButton.KeyDown += (_, e) => { if (e.Key != VirtualKey.Tab) { number.Value = (int)e.Key; e.Handled = true; } }; panel.Children.Add(keyButton); control = panel;
+                }
+            }
+            else
+            {
+                var text = UiFactory.Identify(new TextBox { Text = current }, "Bve" + definition.Property, label); values[definition.Property] = () => text.Text; control = text;
+            }
+            Children.Add(UiFactory.Row(label, control));
+        }
+    }
+    public async Task SaveAsync()
+    {
+        if (snapshot == null || adapter == null) return;
+        if (session.Runner.IsRuntimeRunning(runtime)) throw new InvalidOperationException(l["RuntimeBusy"]);
+        foreach (var pair in values) pending[pair.Key] = pair.Value();
+        var changes = pending.Where(p => snapshot.Values[p.Key] != p.Value).ToDictionary(p => p.Key, p => p.Value);
+        if (changes.Count > 0) await adapter.SaveAsync(snapshot, changes);
+        snapshot = await adapter.ReadAsync(runtime.PreferencesPath!); pending.Clear(); Build();
+    }
+}

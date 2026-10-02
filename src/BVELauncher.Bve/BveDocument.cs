@@ -31,7 +31,7 @@ public sealed partial class BveDocument
             var colon = header.IndexOf(':');
             if (colon >= 0)
             {
-                var name = header[(colon + 1)..].Trim();
+                var name = header[(colon + 1)..].Split(',', '#', ';')[0].Trim();
                 encoding = name.Equals("shift_jis", StringComparison.OrdinalIgnoreCase) || name.Equals("sjis", StringComparison.OrdinalIgnoreCase)
                     ? Encoding.GetEncoding(932, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)
                     : Encoding.GetEncoding(name, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);

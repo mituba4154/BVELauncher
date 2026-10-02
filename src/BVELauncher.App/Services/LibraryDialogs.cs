@@ -1,0 +1,129 @@
+using BVELauncher.App.ViewModels;
+using BVELauncher.Core;
+using BVELauncher.Infrastructure;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+
+namespace BVELauncher.App.Services;
+
+public sealed class LibraryDialogs(LauncherSession session, LocalizationService l, MainPageViewModel vm, XamlRoot root)
+{
+    public async Task ErrorAsync(string message) => await UiFactory.Dialog(root, l["Error"], l["Close"], UiFactory.Text(message)).ShowAsync();
+    public async Task DetailsAsync(ScenarioCardViewModel card)
+    {
+        var form = UiFactory.Form();
+        foreach (var (key, value) in new[] { ("Title", card.Entry.Title), ("Route", card.Entry.RouteTitle), ("Vehicle", card.Entry.VehicleTitle), ("Author", card.Entry.Author), ("Comment", card.Entry.Comment), ("Path", card.Entry.Path) })
+            form.Children.Add(UiFactory.Row(l[key], UiFactory.Text(value)));
+        var alias = UiFactory.Identify(new TextBox { Text = card.Entry.Alias ?? "" }, "ScenarioAlias", l["Alias"]);
+        var group = UiFactory.Identify(new TextBox { Text = card.Entry.CustomGroup ?? "" }, "ScenarioGroup", l["Group"]);
+        var runtimes = session.Settings.Runtimes;
+        var runtime = UiFactory.Combo(new[] { l["Auto"] }.Concat(runtimes.Select(r => r.Kind + " " + r.Version)), card.Entry.RuntimeId == null ? 0 : runtimes.FindIndex(r => r.Id == card.Entry.RuntimeId) + 1, "ScenarioRuntime", l["Runtime"]);
+        var vehicles = session.Library.Vehicles;
+        var vehicle = UiFactory.Combo(new[] { l["StandardVehicle"] }.Concat(vehicles.Select(v => v.DisplayName)), card.Entry.DefaultVehiclePath == null ? 0 : vehicles.ToList().FindIndex(v => v.Path.Equals(card.Entry.DefaultVehiclePath, StringComparison.OrdinalIgnoreCase)) + 1, "ScenarioVehicle", l["DefaultVehicle"]);
+        form.Children.Add(UiFactory.Row(l["Alias"], alias)); form.Children.Add(UiFactory.Row(l["Group"], group)); form.Children.Add(UiFactory.Row(l["Runtime"], runtime)); form.Children.Add(UiFactory.Row(l["DefaultVehicle"], vehicle));
+        var dialog = UiFactory.Dialog(root, l["ScenarioSettings"], l["Cancel"], new ScrollViewer { Content = form, MaxHeight = 580 }); dialog.PrimaryButtonText = l["Save"];
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+            await session.UpdateScenarioAsync(card.Entry with { Alias = alias.Text.Length == 0 ? null : alias.Text, CustomGroup = group.Text.Length == 0 ? null : group.Text, RuntimeId = runtime.SelectedIndex <= 0 ? null : runtimes[runtime.SelectedIndex - 1].Id, DefaultVehiclePath = vehicle.SelectedIndex <= 0 ? null : vehicles[vehicle.SelectedIndex - 1].Path });
+    }
+    public async Task GroupAsync(ScenarioCardViewModel card)
+    {
+        var field = UiFactory.Identify(new TextBox { Text = card.Entry.CustomGroup ?? "", Header = l["Group"] }, "GroupName", l["Group"]);
+        var dialog = UiFactory.Dialog(root, l["MoveGroup"], l["Cancel"], field); dialog.PrimaryButtonText = l["Save"];
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary) await session.UpdateScenarioAsync(card.Entry with { CustomGroup = string.IsNullOrWhiteSpace(field.Text) ? null : field.Text });
+    }
+    public async Task VehicleAsync(ScenarioCardViewModel? card)
+    {
+        var panel = new Grid { RowSpacing = 12, MinWidth = 560, MaxHeight = 580 };
+        panel.RowDefinitions.Add(new() { Height = GridLength.Auto }); panel.RowDefinitions.Add(new() { Height = new(280) }); panel.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        var search = UiFactory.Identify(new TextBox { Header = l["Search"] }, "VehicleSearch", l["Search"]);
+        var list = UiFactory.Identify(new ListView { SelectionMode = ListViewSelectionMode.Single, DisplayMemberPath = "DisplayName" }, "VehicleList", l["Vehicles"]);
+        var details = new TextBox { IsReadOnly = true, TextWrapping = TextWrapping.Wrap, AcceptsReturn = true, MaxHeight = 200 };
+        UiFactory.Identify(details, "VehicleDetails", l["References"]);
+        var vehicles = session.Library.Vehicles;
+        var candidates = new List<VehicleEntry>();
+        if (card != null) candidates.Add(new(Guid.Empty, "", l["StandardVehicle"], [], [], DateTime.MinValue, ""));
+        candidates.AddRange(vehicles.OrderBy(v => v.DisplayName, StringComparer.CurrentCultureIgnoreCase));
+        list.ItemsSource = candidates; list.SelectedIndex = candidates.Count > 0 ? 0 : -1;
+        search.TextChanged += (_, _) => list.ItemsSource = candidates.Where(v => v.DisplayName.Contains(search.Text, StringComparison.CurrentCultureIgnoreCase) || v.Path.Contains(search.Text, StringComparison.OrdinalIgnoreCase)).ToArray();
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is not VehicleEntry selected) return;
+            var usage = session.Library.Scenarios.Where(s => s.References.Any(r => r.ResolvedPath.Equals(selected.Path, StringComparison.OrdinalIgnoreCase))).Select(s => s.DisplayTitle);
+            details.Text = selected.Path + Environment.NewLine + "ATS32: " + (selected.Ats32 ?? "") + Environment.NewLine + "ATS64: " + (selected.Ats64 ?? "") + Environment.NewLine +
+                l["UsedBy"] + ": " + string.Join(", ", usage) + Environment.NewLine + string.Join(Environment.NewLine, selected.References.Select(r => (r.Exists ? "✓ " : "⚠ ") + r.Key + ": " + r.RawPath));
+        };
+        panel.Children.Add(search); Grid.SetRow(list, 1); panel.Children.Add(list); Grid.SetRow(details, 2); panel.Children.Add(details);
+        var dialog = UiFactory.Dialog(root, l["Vehicles"], l["Close"], panel);
+        if (card != null) dialog.PrimaryButtonText = l["DriveThisVehicle"];
+        var result = await dialog.ShowAsync();
+        if (card != null && result == ContentDialogResult.Primary && list.SelectedItem is VehicleEntry chosen)
+            await vm.DriveWithVehicleAsync(card, chosen.Id == Guid.Empty ? null : new(chosen.Path, chosen.DisplayName));
+    }
+    public async Task DiagnosticsAsync(ScenarioCardViewModel card)
+    {
+        var panel = UiFactory.Form();
+        foreach (var reference in card.Entry.References) panel.Children.Add(UiFactory.Text((reference.Exists ? "✓ " : "⚠ ") + reference.Key + ": " + reference.RawPath));
+        foreach (var item in card.Entry.Compatibility.Items)
+        {
+            var text = l[item.Code]; var detail = UiFactory.Text(string.Join(Environment.NewLine, new[] { item.SourcePath, item.Reference, item.ResolvedPath, item.Detail }.Where(s => s.Length > 0)));
+            panel.Children.Add(new Expander { Header = text, Content = detail, HorizontalAlignment = HorizontalAlignment.Stretch });
+        }
+        if (card.Entry.Compatibility.Items.Count == 0) panel.Children.Add(UiFactory.Text(l["NoDiagnostics"]));
+        await UiFactory.Dialog(root, l["Diagnostics"], l["Close"], new ScrollViewer { Content = panel, MaxHeight = 560 }).ShowAsync();
+    }
+    public async Task ImportAsync(string sourcePath)
+    {
+        if (session.Settings.Roots.Count == 0) { await ErrorAsync(l["NoRoot"]); return; }
+        var destination = session.Settings.Roots.FirstOrDefault(r => r.Id == session.Settings.DefaultRootId)?.Path ?? session.Settings.Roots[0].Path;
+        ImportPlan? plan = null;
+        await vm.RunOperationAsync(async token => plan = await session.Imports.AnalyzeAsync(new(sourcePath), destination, new Progress<ScanProgress>(p => vm.Status = l.Format("Scanning", p.Files, p.Scenarios)), token));
+        if (plan == null) return;
+        try
+        {
+            var form = UiFactory.Form(); form.Children.Add(UiFactory.Text(l.Format("ImportSummary", plan.Scenarios, plan.Vehicles, plan.Operations.Count)));
+            form.Children.Add(UiFactory.Text(l[plan.Confidence]));
+            var target = UiFactory.Identify(new TextBox { Text = destination, Header = l["Destination"] }, "ImportDestination", l["Destination"]); form.Children.Add(target);
+            var behavior = UiFactory.Combo(new[] { l["Ask"], l["Skip"], l["Overwrite"] }, (int)session.Settings.ImportConflicts, "ImportConflict", l["Conflict"]); form.Children.Add(UiFactory.Row(l["Conflict"], behavior));
+            form.Children.Add(UiFactory.Text(l["Added"] + ": " + plan.Operations.Count(o => !o.Exists) + " / " + l["Overwritten"] + ": " + plan.Operations.Count(o => o.Exists)));
+            var files = UiFactory.Identify(new ListView { ItemsSource = plan.Operations.Select(o => (o.Exists ? "⚠ " : "+ ") + o.RelativePath).ToArray(), MaxHeight = 200 }, "ImportFiles", l["Files"]);
+            form.Children.Add(new Expander { Header = l["Files"], Content = files, HorizontalAlignment = HorizontalAlignment.Stretch });
+            if (plan.Diagnostics.Count > 0) form.Children.Add(new Expander { Header = l["Warnings"] + " (" + plan.Diagnostics.Count + ")", Content = new ListView { ItemsSource = plan.Diagnostics.Select(d => d.Reference.Length > 0 ? d.Reference : d.Code).ToArray(), MaxHeight = 160 } });
+            var dialog = UiFactory.Dialog(root, l["ImportPreview"], l["Cancel"], new ScrollViewer { Content = form, MaxHeight = 560 }); dialog.PrimaryButtonText = l["Import"];
+            if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+            if (!target.Text.Equals(destination, StringComparison.OrdinalIgnoreCase))
+            {
+                await session.Imports.DiscardAsync(plan); plan = await session.Imports.AnalyzeAsync(new(sourcePath), target.Text);
+                // 配置先変更で競合の数が変わるため、新しいプレビューへ戻す。
+                await session.Imports.DiscardAsync(plan); plan = null;
+                await ImportAtAsync(sourcePath, target.Text); return;
+            }
+            var selected = (ConflictBehavior)behavior.SelectedIndex;
+            if (plan.Operations.Any(o => o.Exists) && selected is ConflictBehavior.Ask or ConflictBehavior.Overwrite)
+            {
+                var confirm = UiFactory.Dialog(root, l["Confirm"], l["Cancel"], UiFactory.Text(l["ConflictConfirm"])); confirm.PrimaryButtonText = l["Overwrite"]; confirm.SecondaryButtonText = l["Skip"];
+                var choice = await confirm.ShowAsync(); if (choice == ContentDialogResult.None) return; selected = choice == ContentDialogResult.Primary ? ConflictBehavior.Overwrite : ConflictBehavior.Skip;
+            }
+            var currentPlan = plan;
+            await vm.RunOperationAsync(async token =>
+            {
+                var result = await session.Imports.CommitAsync(currentPlan, selected, new Progress<ScanProgress>(p => vm.Status = l.Format("Scanning", p.Files, p.Scenarios)), token);
+                plan = null; await session.ScanAsync(null, token); vm.Status = l.Format("Imported", result.Files.Count);
+            });
+        }
+        catch (Exception ex) { await vm.ShowErrorAsync(ex); }
+        finally { if (plan != null && Directory.Exists(plan.StagingDirectory)) await session.Imports.DiscardAsync(plan); }
+    }
+    private async Task ImportAtAsync(string sourcePath, string destination)
+    {
+        var plan = await session.Imports.AnalyzeAsync(new(sourcePath), destination);
+        try
+        {
+            var dialog = UiFactory.Dialog(root, l["ImportPreview"], l["Cancel"], UiFactory.Text(l.Format("ImportSummary", plan.Scenarios, plan.Vehicles, plan.Operations.Count) + Environment.NewLine + destination));
+            dialog.PrimaryButtonText = l["Import"]; dialog.SecondaryButtonText = l["Skip"];
+            if (plan.Operations.Any(o => o.Exists)) dialog.Content = UiFactory.Text(l["ConflictConfirm"] + Environment.NewLine + destination);
+            var result = await dialog.ShowAsync(); if (result == ContentDialogResult.None) return;
+            await vm.RunOperationAsync(async token => { await session.Imports.CommitAsync(plan, result == ContentDialogResult.Primary ? ConflictBehavior.Overwrite : ConflictBehavior.Skip, cancellationToken: token); await session.ScanAsync(null, token); });
+        }
+        finally { if (Directory.Exists(plan.StagingDirectory)) await session.Imports.DiscardAsync(plan); }
+    }
+}

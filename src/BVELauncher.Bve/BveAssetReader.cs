@@ -7,7 +7,7 @@ namespace BVELauncher.Bve;
 
 public sealed class BveAssetReader : IAssetReader
 {
-    public async Task<AssetReadResult> ReadAsync(string path, CancellationToken cancellationToken)
+    public async Task<AssetReadResult> ReadAsync(string path, CancellationToken cancellationToken, AssetKind expectedKind = AssetKind.Unknown)
     {
         var references = new List<AssetReference>();
         var diagnostics = new List<DiagnosticItem>();
@@ -15,6 +15,7 @@ public sealed class BveAssetReader : IAssetReader
         if (bytes.Length > 16 * 1024 * 1024) throw new InvalidDataException("Metadata file too large.");
         var document = BveDocument.Parse(bytes);
         var kind = Identify(document.Header, path);
+        if (kind == AssetKind.Unknown && expectedKind != AssetKind.Unknown) kind = expectedKind;
         var fields = document.Fields;
         if (kind == AssetKind.Scenario)
         {
@@ -35,24 +36,31 @@ public sealed class BveAssetReader : IAssetReader
                 ["MotorNoise"] = AssetKind.MotorNoise, ["Ats32"] = AssetKind.Dll, ["Ats64"] = AssetKind.Dll
             }) if (document.Get(key).Length > 0) Add(key, document.Get(key), type);
         }
-        else if (kind is AssetKind.Map or AssetKind.Train)
+        else if (kind is AssetKind.Map)
         {
             foreach (var reference in MapReferenceScanner.Scan(document.Encoding.GetString(bytes).TrimStart('\uFEFF')))
                 Add(reference.Key, reference.Path, reference.Kind);
         }
-        else if (kind is AssetKind.StructureList or AssetKind.SoundList or AssetKind.VehicleSound or AssetKind.Panel or AssetKind.MotorNoise or AssetKind.Train)
+        else if (kind is AssetKind.Performance or AssetKind.StructureList or AssetKind.SoundList or AssetKind.VehicleSound or AssetKind.Panel or AssetKind.MotorNoise or AssetKind.Train)
         {
             var text = document.Encoding.GetString(bytes).TrimStart('\uFEFF');
-            if (kind == AssetKind.Panel)
+            if (kind is AssetKind.Panel or AssetKind.Performance or AssetKind.Train)
             {
-                foreach (var pair in fields.Where(p => p.Key.Equals("DaytimeImage", StringComparison.OrdinalIgnoreCase) || p.Key.Equals("NighttimeImage", StringComparison.OrdinalIgnoreCase)))
-                    Add(pair.Key, pair.Value, AssetKind.Image);
+                foreach (var line in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
+                {
+                    var pair = line.Split('#', ';')[0].Split('=', 2);
+                    if (pair.Length != 2 || pair[1].Trim().Length == 0) continue;
+                    string key = pair[0].Trim();
+                    if (kind == AssetKind.Panel && (key.Equals("DaytimeImage", StringComparison.OrdinalIgnoreCase) || key.Equals("NighttimeImage", StringComparison.OrdinalIgnoreCase))) Add(key, pair[1].Trim(), AssetKind.Image);
+                    else if (kind == AssetKind.Performance && new[] { "Force", "MaxForce", "Current", "MaxCurrent", "NoLoadCurrent", "Params" }.Contains(key, StringComparer.OrdinalIgnoreCase)) Add(key, pair[1].Trim(), AssetKind.Performance);
+                    else if (kind == AssetKind.Train && new[] { "Structure", "Sound", "Model" }.Contains(key, StringComparer.OrdinalIgnoreCase)) Add(key, pair[1].Trim(), AssetKind.Unknown);
+                }
             }
             else
             {
                 foreach (var line in text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries).Skip(1))
                 {
-                    var columns = CsvColumns(line.Split('#')[0]);
+                    var columns = CsvColumns(line);
                     if (columns.Count >= 2 && columns[1].Trim().Length > 0)
                         Add(columns[0], columns[1], kind == AssetKind.StructureList ? AssetKind.Model : AssetKind.Audio);
                 }
@@ -117,7 +125,7 @@ public sealed class BveAssetReader : IAssetReader
             ("BveTs Scenario", AssetKind.Scenario), ("BveTs Map", AssetKind.Map),
             ("BveTs Vehicle Parameters", AssetKind.Parameters), ("BveTs Vehicle Performance", AssetKind.Performance),
             ("BveTs Vehicle Sound", AssetKind.VehicleSound), ("BveTs Vehicle", AssetKind.Vehicle),
-            ("BveTs Panel", AssetKind.Panel), ("BveTs Motor Noise", AssetKind.MotorNoise),
+            ("BveTs Instrument Panel", AssetKind.Panel), ("BveTs Panel", AssetKind.Panel), ("BveTs Motor Noise", AssetKind.MotorNoise),
             ("BveTs Structure List", AssetKind.StructureList), ("BveTs Sound List", AssetKind.SoundList),
             ("BveTs Station List", AssetKind.StationList), ("BveTs Signal Aspects List", AssetKind.SignalList),
             ("BveTs Train", AssetKind.Train)
@@ -141,6 +149,7 @@ public sealed class BveAssetReader : IAssetReader
                 if (quoted && i + 1 < line.Length && line[i + 1] == '"') { current.Append('"'); i++; }
                 else quoted = !quoted;
             }
+            else if (line[i] == '#' && !quoted) break;
             else if (line[i] == ',' && !quoted) { columns.Add(current.ToString().Trim()); current.Clear(); }
             else current.Append(line[i]);
         }

@@ -1,0 +1,894 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Added" xml:space="preserve">
+    <value>追加</value>
+  </data>
+  <data name="AddFolder" xml:space="preserve">
+    <value>フォルダーを追加</value>
+  </data>
+  <data name="AddRuntime" xml:space="preserve">
+    <value>BVEを登録</value>
+  </data>
+  <data name="Advanced" xml:space="preserve">
+    <value>詳細</value>
+  </data>
+  <data name="Alias" xml:space="preserve">
+    <value>表示名</value>
+  </data>
+  <data name="All" xml:space="preserve">
+    <value>すべて</value>
+  </data>
+  <data name="Appearance" xml:space="preserve">
+    <value>外観</value>
+  </data>
+  <data name="ArchiveDuplicatePath" xml:space="preserve">
+    <value>アーカイブに重複するパスがあります</value>
+  </data>
+  <data name="ArchiveInvalidPath" xml:space="preserve">
+    <value>アーカイブに無効なパスがあります</value>
+  </data>
+  <data name="ArchiveLimit" xml:space="preserve">
+    <value>アーカイブの展開上限を超えています</value>
+  </data>
+  <data name="ArchiveLink" xml:space="preserve">
+    <value>リンクを含むアーカイブは取り込めません</value>
+  </data>
+  <data name="ArchiveRootedPath" xml:space="preserve">
+    <value>アーカイブに絶対パスがあります</value>
+  </data>
+  <data name="Ask" xml:space="preserve">
+    <value>確認する</value>
+  </data>
+  <data name="Assistants" xml:space="preserve">
+    <value>補助表示</value>
+  </data>
+  <data name="Ats32Only" xml:space="preserve">
+    <value>ATS32のみ指定されています</value>
+  </data>
+  <data name="Ats64Only" xml:space="preserve">
+    <value>ATS64のみ指定されています</value>
+  </data>
+  <data name="Author" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="Auto" xml:space="preserve">
+    <value>自動</value>
+  </data>
+  <data name="BackupDays" xml:space="preserve">
+    <value>バックアップ保持日数</value>
+  </data>
+  <data name="BackupRetentionWarning" xml:space="preserve">
+    <value>未復元のインポート用バックアップは保持されます</value>
+  </data>
+  <data name="Backups" xml:space="preserve">
+    <value>バックアップ</value>
+  </data>
+  <data name="Busy" xml:space="preserve">
+    <value>処理中…</value>
+  </data>
+  <data name="Bve" xml:space="preserve">
+    <value>BVE</value>
+  </data>
+  <data name="Bve_Anisotropy" xml:space="preserve">
+    <value>異方性フィルター</value>
+  </data>
+  <data name="Bve_Assist_clock" xml:space="preserve">
+    <value>速度・時刻 表示</value>
+  </data>
+  <data name="Bve_Assist_detail" xml:space="preserve">
+    <value>内部計算値 表示</value>
+  </data>
+  <data name="Bve_Assist_geom" xml:space="preserve">
+    <value>曲線・勾配 表示</value>
+  </data>
+  <data name="Bve_Assist_inst" xml:space="preserve">
+    <value>運転指示 表示</value>
+  </data>
+  <data name="Bve_Assist_lever" xml:space="preserve">
+    <value>ハンドル位置 表示</value>
+  </data>
+  <data name="Bve_Assist_limit" xml:space="preserve">
+    <value>制限速度 表示</value>
+  </data>
+  <data name="Bve_Assist_sta" xml:space="preserve">
+    <value>次駅情報 表示</value>
+  </data>
+  <data name="Bve_Assist_stop" xml:space="preserve">
+    <value>停止位置 表示</value>
+  </data>
+  <data name="Bve_Assist_sway" xml:space="preserve">
+    <value>乗客の揺れ 表示</value>
+  </data>
+  <data name="Bve_AssistAuto_clock" xml:space="preserve">
+    <value>速度・時刻 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_detail" xml:space="preserve">
+    <value>内部計算値 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_geom" xml:space="preserve">
+    <value>曲線・勾配 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_inst" xml:space="preserve">
+    <value>運転指示 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_lever" xml:space="preserve">
+    <value>ハンドル位置 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_limit" xml:space="preserve">
+    <value>制限速度 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_sta" xml:space="preserve">
+    <value>次駅情報 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_stop" xml:space="preserve">
+    <value>停止位置 自動配置</value>
+  </data>
+  <data name="Bve_AssistAuto_sway" xml:space="preserve">
+    <value>乗客の揺れ 自動配置</value>
+  </data>
+  <data name="Bve_AssistSize_clock" xml:space="preserve">
+    <value>速度・時刻 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_detail" xml:space="preserve">
+    <value>内部計算値 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_geom" xml:space="preserve">
+    <value>曲線・勾配 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_inst" xml:space="preserve">
+    <value>運転指示 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_lever" xml:space="preserve">
+    <value>ハンドル位置 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_limit" xml:space="preserve">
+    <value>制限速度 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_sta" xml:space="preserve">
+    <value>次駅情報 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_stop" xml:space="preserve">
+    <value>停止位置 大きさ</value>
+  </data>
+  <data name="Bve_AssistSize_sway" xml:space="preserve">
+    <value>乗客の揺れ 大きさ</value>
+  </data>
+  <data name="Bve_AssistX_clock" xml:space="preserve">
+    <value>速度・時刻 横位置</value>
+  </data>
+  <data name="Bve_AssistX_detail" xml:space="preserve">
+    <value>内部計算値 横位置</value>
+  </data>
+  <data name="Bve_AssistX_geom" xml:space="preserve">
+    <value>曲線・勾配 横位置</value>
+  </data>
+  <data name="Bve_AssistX_inst" xml:space="preserve">
+    <value>運転指示 横位置</value>
+  </data>
+  <data name="Bve_AssistX_lever" xml:space="preserve">
+    <value>ハンドル位置 横位置</value>
+  </data>
+  <data name="Bve_AssistX_limit" xml:space="preserve">
+    <value>制限速度 横位置</value>
+  </data>
+  <data name="Bve_AssistX_sta" xml:space="preserve">
+    <value>次駅情報 横位置</value>
+  </data>
+  <data name="Bve_AssistX_stop" xml:space="preserve">
+    <value>停止位置 横位置</value>
+  </data>
+  <data name="Bve_AssistX_sway" xml:space="preserve">
+    <value>乗客の揺れ 横位置</value>
+  </data>
+  <data name="Bve_AssistY_clock" xml:space="preserve">
+    <value>速度・時刻 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_detail" xml:space="preserve">
+    <value>内部計算値 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_geom" xml:space="preserve">
+    <value>曲線・勾配 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_inst" xml:space="preserve">
+    <value>運転指示 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_lever" xml:space="preserve">
+    <value>ハンドル位置 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_limit" xml:space="preserve">
+    <value>制限速度 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_sta" xml:space="preserve">
+    <value>次駅情報 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_stop" xml:space="preserve">
+    <value>停止位置 縦位置</value>
+  </data>
+  <data name="Bve_AssistY_sway" xml:space="preserve">
+    <value>乗客の揺れ 縦位置</value>
+  </data>
+  <data name="Bve_DevelopmentEnabled" xml:space="preserve">
+    <value>開発用機能</value>
+  </data>
+  <data name="Bve_DrawDistance" xml:space="preserve">
+    <value>描画距離</value>
+  </data>
+  <data name="Bve_FontName" xml:space="preserve">
+    <value>フォント</value>
+  </data>
+  <data name="Bve_FontStyle" xml:space="preserve">
+    <value>フォントスタイル</value>
+  </data>
+  <data name="Bve_HeadMotion" xml:space="preserve">
+    <value>頭の揺れ</value>
+  </data>
+  <data name="Bve_InputPlugins" xml:space="preserve">
+    <value>入力プラグイン（|区切り）</value>
+  </data>
+  <data name="Bve_KeyAts0" xml:space="preserve">
+    <value>保安装置 0</value>
+  </data>
+  <data name="Bve_KeyAts1" xml:space="preserve">
+    <value>保安装置 1</value>
+  </data>
+  <data name="Bve_KeyAts10" xml:space="preserve">
+    <value>保安装置 10</value>
+  </data>
+  <data name="Bve_KeyAts11" xml:space="preserve">
+    <value>保安装置 11</value>
+  </data>
+  <data name="Bve_KeyAts12" xml:space="preserve">
+    <value>保安装置 12</value>
+  </data>
+  <data name="Bve_KeyAts13" xml:space="preserve">
+    <value>保安装置 13</value>
+  </data>
+  <data name="Bve_KeyAts14" xml:space="preserve">
+    <value>保安装置 14</value>
+  </data>
+  <data name="Bve_KeyAts15" xml:space="preserve">
+    <value>保安装置 15</value>
+  </data>
+  <data name="Bve_KeyAts2" xml:space="preserve">
+    <value>保安装置 2</value>
+  </data>
+  <data name="Bve_KeyAts3" xml:space="preserve">
+    <value>保安装置 3</value>
+  </data>
+  <data name="Bve_KeyAts4" xml:space="preserve">
+    <value>保安装置 4</value>
+  </data>
+  <data name="Bve_KeyAts5" xml:space="preserve">
+    <value>保安装置 5</value>
+  </data>
+  <data name="Bve_KeyAts6" xml:space="preserve">
+    <value>保安装置 6</value>
+  </data>
+  <data name="Bve_KeyAts7" xml:space="preserve">
+    <value>保安装置 7</value>
+  </data>
+  <data name="Bve_KeyAts8" xml:space="preserve">
+    <value>保安装置 8</value>
+  </data>
+  <data name="Bve_KeyAts9" xml:space="preserve">
+    <value>保安装置 9</value>
+  </data>
+  <data name="Bve_KeyAxis0_0" xml:space="preserve">
+    <value>レバーサー ＋方向</value>
+  </data>
+  <data name="Bve_KeyAxis0_1" xml:space="preserve">
+    <value>レバーサー 切方向</value>
+  </data>
+  <data name="Bve_KeyAxis0_2" xml:space="preserve">
+    <value>レバーサー －方向</value>
+  </data>
+  <data name="Bve_KeyAxis0_3" xml:space="preserve">
+    <value>レバーサー 最小</value>
+  </data>
+  <data name="Bve_KeyAxis0_4" xml:space="preserve">
+    <value>レバーサー 切</value>
+  </data>
+  <data name="Bve_KeyAxis0_5" xml:space="preserve">
+    <value>レバーサー 最大</value>
+  </data>
+  <data name="Bve_KeyAxis1_0" xml:space="preserve">
+    <value>マスコン ＋方向</value>
+  </data>
+  <data name="Bve_KeyAxis1_1" xml:space="preserve">
+    <value>マスコン 切方向</value>
+  </data>
+  <data name="Bve_KeyAxis1_2" xml:space="preserve">
+    <value>マスコン －方向</value>
+  </data>
+  <data name="Bve_KeyAxis1_3" xml:space="preserve">
+    <value>マスコン 最小</value>
+  </data>
+  <data name="Bve_KeyAxis1_4" xml:space="preserve">
+    <value>マスコン 切</value>
+  </data>
+  <data name="Bve_KeyAxis1_5" xml:space="preserve">
+    <value>マスコン 最大</value>
+  </data>
+  <data name="Bve_KeyAxis2_0" xml:space="preserve">
+    <value>ブレーキ ＋方向</value>
+  </data>
+  <data name="Bve_KeyAxis2_1" xml:space="preserve">
+    <value>ブレーキ 切方向</value>
+  </data>
+  <data name="Bve_KeyAxis2_2" xml:space="preserve">
+    <value>ブレーキ －方向</value>
+  </data>
+  <data name="Bve_KeyAxis2_3" xml:space="preserve">
+    <value>ブレーキ 最小</value>
+  </data>
+  <data name="Bve_KeyAxis2_4" xml:space="preserve">
+    <value>ブレーキ 切</value>
+  </data>
+  <data name="Bve_KeyAxis2_5" xml:space="preserve">
+    <value>ブレーキ 最大</value>
+  </data>
+  <data name="Bve_KeyAxis3_0" xml:space="preserve">
+    <value>ワンハンドル ＋方向</value>
+  </data>
+  <data name="Bve_KeyAxis3_1" xml:space="preserve">
+    <value>ワンハンドル 切方向</value>
+  </data>
+  <data name="Bve_KeyAxis3_2" xml:space="preserve">
+    <value>ワンハンドル －方向</value>
+  </data>
+  <data name="Bve_KeyAxis3_3" xml:space="preserve">
+    <value>ワンハンドル 最小</value>
+  </data>
+  <data name="Bve_KeyAxis3_4" xml:space="preserve">
+    <value>ワンハンドル 切</value>
+  </data>
+  <data name="Bve_KeyAxis3_5" xml:space="preserve">
+    <value>ワンハンドル 最大</value>
+  </data>
+  <data name="Bve_KeySimulation0" xml:space="preserve">
+    <value>視界を上に移動</value>
+  </data>
+  <data name="Bve_KeySimulation1" xml:space="preserve">
+    <value>視界を下に移動</value>
+  </data>
+  <data name="Bve_KeySimulation10" xml:space="preserve">
+    <value>時間の早送り</value>
+  </data>
+  <data name="Bve_KeySimulation11" xml:space="preserve">
+    <value>シナリオの再読込</value>
+  </data>
+  <data name="Bve_KeySimulation12" xml:space="preserve">
+    <value>定速運転</value>
+  </data>
+  <data name="Bve_KeySimulation2" xml:space="preserve">
+    <value>視界を左に移動</value>
+  </data>
+  <data name="Bve_KeySimulation3" xml:space="preserve">
+    <value>視界を右に移動</value>
+  </data>
+  <data name="Bve_KeySimulation4" xml:space="preserve">
+    <value>視界を元に戻す</value>
+  </data>
+  <data name="Bve_KeySimulation5" xml:space="preserve">
+    <value>視界の拡大</value>
+  </data>
+  <data name="Bve_KeySimulation6" xml:space="preserve">
+    <value>視界の縮小</value>
+  </data>
+  <data name="Bve_KeySimulation7" xml:space="preserve">
+    <value>視点の切り替え</value>
+  </data>
+  <data name="Bve_KeySimulation8" xml:space="preserve">
+    <value>時刻表の表示</value>
+  </data>
+  <data name="Bve_KeySimulation9" xml:space="preserve">
+    <value>走行速度の変更</value>
+  </data>
+  <data name="Bve_KeySwitch0" xml:space="preserve">
+    <value>一時停止</value>
+  </data>
+  <data name="Bve_KeySwitch1" xml:space="preserve">
+    <value>警笛1</value>
+  </data>
+  <data name="Bve_KeySwitch2" xml:space="preserve">
+    <value>警笛2</value>
+  </data>
+  <data name="Bve_KeySwitch3" xml:space="preserve">
+    <value>ミュージックホーン</value>
+  </data>
+  <data name="Bve_Language" xml:space="preserve">
+    <value>BVEの言語</value>
+  </data>
+  <data name="Bve_ScenarioDirectory" xml:space="preserve">
+    <value>シナリオフォルダー</value>
+  </data>
+  <data name="Bve_ScreenHeight" xml:space="preserve">
+    <value>画面高さ（0＝デスクトップ）</value>
+  </data>
+  <data name="Bve_ScreenWidth" xml:space="preserve">
+    <value>画面幅（0＝デスクトップ）</value>
+  </data>
+  <data name="Bve_TimetableSize" xml:space="preserve">
+    <value>時刻表の大きさ</value>
+  </data>
+  <data name="Bve_Windowed" xml:space="preserve">
+    <value>ウィンドウ表示</value>
+  </data>
+  <data name="Bve_WindowHeight" xml:space="preserve">
+    <value>ウィンドウ高さ</value>
+  </data>
+  <data name="Bve_WindowWidth" xml:space="preserve">
+    <value>ウィンドウ幅</value>
+  </data>
+  <data name="Bve5" xml:space="preserve">
+    <value>BVE 5.8</value>
+  </data>
+  <data name="Bve6" xml:space="preserve">
+    <value>BVE 6</value>
+  </data>
+  <data name="BveSettings" xml:space="preserve">
+    <value>BVEの標準設定</value>
+  </data>
+  <data name="CacheConfirm" xml:space="preserve">
+    <value>再生成可能なサムネイルキャッシュを消去します。</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="ChooseFile" xml:space="preserve">
+    <value>ファイルを選択</value>
+  </data>
+  <data name="ChooseFolder" xml:space="preserve">
+    <value>フォルダーを選択</value>
+  </data>
+  <data name="ClearCache" xml:space="preserve">
+    <value>キャッシュを消去</value>
+  </data>
+  <data name="ClickBehavior" xml:space="preserve">
+    <value>シナリオをクリックしたとき</value>
+  </data>
+  <data name="ClickDetails" xml:space="preserve">
+    <value>詳細を開く</value>
+  </data>
+  <data name="ClickLaunch" xml:space="preserve">
+    <value>すぐ運転開始</value>
+  </data>
+  <data name="ClickSelect" xml:space="preserve">
+    <value>選択のみ</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>閉じる</value>
+  </data>
+  <data name="Collapse" xml:space="preserve">
+    <value>折りたたむ</value>
+  </data>
+  <data name="Comment" xml:space="preserve">
+    <value>コメント</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>確認</value>
+  </data>
+  <data name="Conflict" xml:space="preserve">
+    <value>同名ファイル</value>
+  </data>
+  <data name="ConflictConfirm" xml:space="preserve">
+    <value>同名ファイルを上書きします。元ファイルはバックアップされます。</value>
+  </data>
+  <data name="Count" xml:space="preserve">
+    <value>{0} シナリオ</value>
+  </data>
+  <data name="Dark" xml:space="preserve">
+    <value>ダーク</value>
+  </data>
+  <data name="DataFolder" xml:space="preserve">
+    <value>データフォルダー</value>
+  </data>
+  <data name="DefaultRoot" xml:space="preserve">
+    <value>既定の配置先</value>
+  </data>
+  <data name="DefaultRuntime" xml:space="preserve">
+    <value>既定のBVE</value>
+  </data>
+  <data name="DefaultVehicle" xml:space="preserve">
+    <value>既定の車両</value>
+  </data>
+  <data name="DefaultView" xml:space="preserve">
+    <value>初期表示</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>削除</value>
+  </data>
+  <data name="Destination" xml:space="preserve">
+    <value>配置先</value>
+  </data>
+  <data name="Diagnostics" xml:space="preserve">
+    <value>診断</value>
+  </data>
+  <data name="DllArchitecture" xml:space="preserve">
+    <value>DLLのアーキテクチャが一致しません</value>
+  </data>
+  <data name="DllUnknown" xml:space="preserve">
+    <value>DLL情報は未確認です</value>
+  </data>
+  <data name="DriveThisVehicle" xml:space="preserve">
+    <value>この車両で運転</value>
+  </data>
+  <data name="DropHint" xml:space="preserve">
+    <value>ここにドロップしてインポート</value>
+  </data>
+  <data name="Empty" xml:space="preserve">
+    <value>シナリオが見つかりません</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>エラー</value>
+  </data>
+  <data name="Executable" xml:space="preserve">
+    <value>実行ファイル</value>
+  </data>
+  <data name="ExpandGroup" xml:space="preserve">
+    <value>グループを展開・折りたたみ</value>
+  </data>
+  <data name="Extensions" xml:space="preserve">
+    <value>第三者拡張</value>
+  </data>
+  <data name="Favorite" xml:space="preserve">
+    <value>お気に入り</value>
+  </data>
+  <data name="Favorites" xml:space="preserve">
+    <value>お気に入り</value>
+  </data>
+  <data name="Files" xml:space="preserve">
+    <value>ファイル</value>
+  </data>
+  <data name="Folder" xml:space="preserve">
+    <value>フォルダー</value>
+  </data>
+  <data name="General" xml:space="preserve">
+    <value>一般</value>
+  </data>
+  <data name="Graphics" xml:space="preserve">
+    <value>グラフィック</value>
+  </data>
+  <data name="Grid" xml:space="preserve">
+    <value>グリッド</value>
+  </data>
+  <data name="Group" xml:space="preserve">
+    <value>グループ</value>
+  </data>
+  <data name="HeaderVersion" xml:space="preserve">
+    <value>ヘッダーのバージョンを確認してください</value>
+  </data>
+  <data name="Hide" xml:space="preserve">
+    <value>非表示</value>
+  </data>
+  <data name="HideWindow" xml:space="preserve">
+    <value>非表示</value>
+  </data>
+  <data name="Import" xml:space="preserve">
+    <value>インポート</value>
+  </data>
+  <data name="ImportDestinationChanged" xml:space="preserve">
+    <value>配置先が変更されました。再解析してください。</value>
+  </data>
+  <data name="Imported" xml:space="preserve">
+    <value>{0} ファイルをインポートしました</value>
+  </data>
+  <data name="ImportEmpty" xml:space="preserve">
+    <value>インポート元にファイルがありません</value>
+  </data>
+  <data name="ImportHistory" xml:space="preserve">
+    <value>インポート履歴</value>
+  </data>
+  <data name="ImportPreview" xml:space="preserve">
+    <value>インポートの確認</value>
+  </data>
+  <data name="ImportSourceChanged" xml:space="preserve">
+    <value>インポート元が変更されました。再解析してください。</value>
+  </data>
+  <data name="ImportSummary" xml:space="preserve">
+    <value>シナリオ {0} / 車両 {1} / ファイル {2}</value>
+  </data>
+  <data name="Input" xml:space="preserve">
+    <value>入力デバイス</value>
+  </data>
+  <data name="InstallerConfirm" xml:space="preserve">
+    <value>選択したBveEXインストーラーを起動します。</value>
+  </data>
+  <data name="InvalidPath" xml:space="preserve">
+    <value>参照パスが無効です</value>
+  </data>
+  <data name="KeepVisible" xml:space="preserve">
+    <value>表示したまま</value>
+  </data>
+  <data name="Keyboard" xml:space="preserve">
+    <value>キーボード</value>
+  </data>
+  <data name="KeyValue" xml:space="preserve">
+    <value>キーコード</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>言語</value>
+  </data>
+  <data name="Launch" xml:space="preserve">
+    <value>運転</value>
+  </data>
+  <data name="LaunchBehavior" xml:space="preserve">
+    <value>BVE起動時</value>
+  </data>
+  <data name="Light" xml:space="preserve">
+    <value>ライト</value>
+  </data>
+  <data name="List" xml:space="preserve">
+    <value>リスト</value>
+  </data>
+  <data name="LocalInstaller" xml:space="preserve">
+    <value>ローカルのBveEXインストーラー</value>
+  </data>
+  <data name="LogFolder" xml:space="preserve">
+    <value>ログフォルダー</value>
+  </data>
+  <data name="Minimize" xml:space="preserve">
+    <value>最小化</value>
+  </data>
+  <data name="MissingField" xml:space="preserve">
+    <value>必須の参照が空です</value>
+  </data>
+  <data name="Modified" xml:space="preserve">
+    <value>更新日時</value>
+  </data>
+  <data name="MoveGroup" xml:space="preserve">
+    <value>グループへ移動</value>
+  </data>
+  <data name="Name" xml:space="preserve">
+    <value>名前</value>
+  </data>
+  <data name="NoDiagnostics" xml:space="preserve">
+    <value>問題は検出されませんでした</value>
+  </data>
+  <data name="NoExtension" xml:space="preserve">
+    <value>未検出</value>
+  </data>
+  <data name="NoRoot" xml:space="preserve">
+    <value>配置先のフォルダーを追加してください</value>
+  </data>
+  <data name="NoSelection" xml:space="preserve">
+    <value>シナリオを選択してください</value>
+  </data>
+  <data name="Notices" xml:space="preserve">
+    <value>第三者ライセンス</value>
+  </data>
+  <data name="NoVehicles" xml:space="preserve">
+    <value>車両が見つかりません</value>
+  </data>
+  <data name="OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="OpenBveSettings" xml:space="preserve">
+    <value>BVEで設定を開く</value>
+  </data>
+  <data name="OpenFile" xml:space="preserve">
+    <value>ファイルを開く</value>
+  </data>
+  <data name="OpenFolder" xml:space="preserve">
+    <value>フォルダーを開く</value>
+  </data>
+  <data name="OperationFailed" xml:space="preserve">
+    <value>操作に失敗しました: {0}</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>その他</value>
+  </data>
+  <data name="OverrideLaunch" xml:space="preserve">
+    <value>車両を変更して運転…</value>
+  </data>
+  <data name="Overwrite" xml:space="preserve">
+    <value>上書き</value>
+  </data>
+  <data name="Overwritten" xml:space="preserve">
+    <value>上書き</value>
+  </data>
+  <data name="PanelMissing" xml:space="preserve">
+    <value>Panelが指定されていません</value>
+  </data>
+  <data name="ParseFailed" xml:space="preserve">
+    <value>ファイルを解析できませんでした</value>
+  </data>
+  <data name="Path" xml:space="preserve">
+    <value>パス</value>
+  </data>
+  <data name="PreferencesPath" xml:space="preserve">
+    <value>設定ファイル</value>
+  </data>
+  <data name="PreserveStructure" xml:space="preserve">
+    <value>元のフォルダー構造を保持</value>
+  </data>
+  <data name="ProductDescription" xml:space="preserve">
+    <value>BVEシナリオと車両の管理</value>
+  </data>
+  <data name="ProductDisplayName" xml:space="preserve">
+    <value>BVELauncher</value>
+  </data>
+  <data name="Properties" xml:space="preserve">
+    <value>プロパティー</value>
+  </data>
+  <data name="Rebuild" xml:space="preserve">
+    <value>データベースを再構築</value>
+  </data>
+  <data name="Recent" xml:space="preserve">
+    <value>最近運転</value>
+  </data>
+  <data name="ReferenceMissing" xml:space="preserve">
+    <value>参照ファイルが見つかりません</value>
+  </data>
+  <data name="References" xml:space="preserve">
+    <value>参照</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="RemoveRoot" xml:space="preserve">
+    <value>一覧から外す</value>
+  </data>
+  <data name="Rescan" xml:space="preserve">
+    <value>再検出</value>
+  </data>
+  <data name="ResetConfirm" xml:space="preserve">
+    <value>アプリ設定を初期値へ戻します。シナリオと車両は保持されます。</value>
+  </data>
+  <data name="ResetSettings" xml:space="preserve">
+    <value>アプリ設定をリセット</value>
+  </data>
+  <data name="Restore" xml:space="preserve">
+    <value>復元</value>
+  </data>
+  <data name="RestoreBackupConfirm" xml:space="preserve">
+    <value>選択したバックアップを復元します。現在のファイルも先にバックアップします。</value>
+  </data>
+  <data name="RestoreGroup" xml:space="preserve">
+    <value>自動グループ</value>
+  </data>
+  <data name="RestoreHidden" xml:space="preserve">
+    <value>非表示を解除</value>
+  </data>
+  <data name="RootMissing" xml:space="preserve">
+    <value>フォルダーが見つかりません</value>
+  </data>
+  <data name="Route" xml:space="preserve">
+    <value>路線</value>
+  </data>
+  <data name="Running" xml:space="preserve">
+    <value>実行中</value>
+  </data>
+  <data name="Runtime" xml:space="preserve">
+    <value>起動するBVE</value>
+  </data>
+  <data name="RuntimeBusy" xml:space="preserve">
+    <value>BVEの終了後に保存してください</value>
+  </data>
+  <data name="RuntimeMismatch" xml:space="preserve">
+    <value>別のBVE世代向けの車両が指定されています</value>
+  </data>
+  <data name="RuntimeMissing" xml:space="preserve">
+    <value>BVEが見つかりません</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Saved" xml:space="preserve">
+    <value>保存しました</value>
+  </data>
+  <data name="ScanCancel" xml:space="preserve">
+    <value>走査をキャンセル</value>
+  </data>
+  <data name="Scanning" xml:space="preserve">
+    <value>{0} ファイル / {1} シナリオ</value>
+  </data>
+  <data name="ScenarioMissing" xml:space="preserve">
+    <value>シナリオファイルが見つかりません</value>
+  </data>
+  <data name="Scenarios" xml:space="preserve">
+    <value>シナリオ</value>
+  </data>
+  <data name="ScenarioSettings" xml:space="preserve">
+    <value>シナリオ設定</value>
+  </data>
+  <data name="ScenariosRoot" xml:space="preserve">
+    <value>Scenarios内へ配置</value>
+  </data>
+  <data name="Search" xml:space="preserve">
+    <value>検索</value>
+  </data>
+  <data name="SelectVehicle" xml:space="preserve">
+    <value>車両を選択</value>
+  </data>
+  <data name="SetKey" xml:space="preserve">
+    <value>キーを入力</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>設定</value>
+  </data>
+  <data name="SettingsChanged" xml:space="preserve">
+    <value>設定ファイルが変更されました。読み直してください。</value>
+  </data>
+  <data name="SettingsInvalidBoolean" xml:space="preserve">
+    <value>設定値はtrueまたはfalseにしてください</value>
+  </data>
+  <data name="SettingsInvalidChoice" xml:space="preserve">
+    <value>設定の選択値が無効です</value>
+  </data>
+  <data name="SettingsOutOfRange" xml:space="preserve">
+    <value>設定値が範囲外です</value>
+  </data>
+  <data name="SettingsUnavailable" xml:space="preserve">
+    <value>設定ファイルが見つかりません。BVEを起動して終了するか、設定ファイルを選択してください。</value>
+  </data>
+  <data name="Simulation" xml:space="preserve">
+    <value>シミュレーション</value>
+  </data>
+  <data name="Skip" xml:space="preserve">
+    <value>スキップ</value>
+  </data>
+  <data name="Sort" xml:space="preserve">
+    <value>並べ替え</value>
+  </data>
+  <data name="SoundMissing" xml:space="preserve">
+    <value>Soundが指定されていません</value>
+  </data>
+  <data name="Standard" xml:space="preserve">
+    <value>標準</value>
+  </data>
+  <data name="StandardVehicle" xml:space="preserve">
+    <value>シナリオ標準</value>
+  </data>
+  <data name="System" xml:space="preserve">
+    <value>システム</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>テーマ</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>タイトル</value>
+  </data>
+  <data name="Uninstall" xml:space="preserve">
+    <value>アンインストール</value>
+  </data>
+  <data name="UninstallConfirm" xml:space="preserve">
+    <value>管理対象の未変更ファイルを削除します。共有ファイルと既存ファイルは残ります。</value>
+  </data>
+  <data name="UninstallResult" xml:space="preserve">
+    <value>削除 {0} / 保持 {1}</value>
+  </data>
+  <data name="Unofficial" xml:space="preserve">
+    <value>BVE / BveEXとは独立した非公式ツールです。</value>
+  </data>
+  <data name="UsedBy" xml:space="preserve">
+    <value>使用シナリオ</value>
+  </data>
+  <data name="Vehicle" xml:space="preserve">
+    <value>車両</value>
+  </data>
+  <data name="Vehicles" xml:space="preserve">
+    <value>車両</value>
+  </data>
+  <data name="Warnings" xml:space="preserve">
+    <value>警告あり</value>
+  </data>
+  <data name="WarningSymbol" xml:space="preserve">
+    <value>⚠</value>
+  </data>
+</root>

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "BVELauncher.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "BVELauncher.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
